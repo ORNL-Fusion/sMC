@@ -1,0 +1,16 @@
+
+#PBS -N sMC+rf
+#PBS -A FUS016
+#PBS -m e
+#PBS -j oe
+#PBS -l walltime=0:30:00,size=16
+#PBS -q debug
+
+cd $PBS_O_WORKDIR
+cp $HOME/sMC+rf/grfont.dat.franklin grfont.dat
+cp $HOME/sMC+rf/davect.tbl data/
+rm sMC+rf.o*
+rm data/*.eps
+
+aprun -n 16 $HOME/sMC+rf/xsMC+rf.jaguar
+

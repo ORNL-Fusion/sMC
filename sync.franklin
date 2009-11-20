@@ -1,0 +1,2 @@
+#/bin/bash
+rsync -avzL --exclude '*.mod' --exclude '*.o' --exclude '*.ps' --exclude '*.eps' ~/code/sMC+rf/ greendl1@franklin.nersc.gov:~/sMC+rf 

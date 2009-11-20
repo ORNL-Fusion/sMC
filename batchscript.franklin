@@ -1,0 +1,17 @@
+
+#PBS -N sMC+rf 
+#PBS -A m77
+#PBS -m e
+#PBS -j oe
+#PBS -l walltime=0:30:00
+#PBS -l mppwidth=100
+#PBS -q debug
+
+
+cd $PBS_O_WORKDIR
+cp $HOME/sMC+rf/data/grfont.dat.franklin grfont.dat
+cp $HOME/sMC+rf/data/davect.tbl data/
+rm sMC+rf.o*
+
+aprun -n 100 $HOME/sMC+rf/xsMC+rf.franklin  > running.log 2>&1
+
