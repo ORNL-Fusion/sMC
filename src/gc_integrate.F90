@@ -334,10 +334,10 @@ contains
 
         if ( present ( plot ) .and. mpi_pId == 0 ) then 
             if ( plot ) then  
- 
+
+                write(*,*) 'Allocating DISLIN arrays ...' 
                 allocate ( rTrack(maxSteps), zTrack(maxSteps), &
                     vPerpTrack(maxSteps), vParTrack(maxSteps) )
-           
                 call scrMod ( 'REVERS' )
                 call setPag ( 'DA4P' )! nxPag = 2100, nyPag = 2970
                 call metaFl ( 'XWIN' )
@@ -352,22 +352,22 @@ contains
                 call graf ( 0.5, 1.0, 0.5, 0.25, -0.25, 0.25, -0.25, 0.25 ) 
                 call noClip ()
                 call color ('BLUE')         
-                
+               
                 nLevs   = 10 
                 levStep    = (sibry-simag)/nLevs 
-                if ( .not. allocated ( levels ) ) &
-                    allocate ( levels(nLevs) )
-                levels = (/ (i*levStep,i=0,nLevs) /)+simag
+                allocate ( levels(nLevs) )
+                levels = (/ (i*levStep,i=1,nLevs) /)+simag
+
                 do i=1,nLevs
                     call contur ( r, nw, z, nh, psizr, levels(i) ) 
                 end do
+                deallocate ( levels )
                 call color ( 'MAGENTA' )
                 call curve ( rbbbs, zbbbs, nbbbs )
 
                 call endGrf ()
                 call color ('RED' )
                 !call setGrf ( 'NONE', 'NONE', 'NONE', 'NONE' ) 
-
             end if 
         end if 
 #endif
@@ -535,7 +535,7 @@ contains
             !endif
 
             if ( psi_here > sibry * 0.99 ) then 
-                if ( mpi_pId == 0 ) write(*,*) 'Wall'
+                if ( mpi_pId == 0 ) write(*,*) 'Wall', psi_here, sibry
                 nP_wall = nP_wall + 1
                 weight_out = 0.0
                 status_out  = -8000
@@ -659,7 +659,7 @@ contains
             kPar  = toroidalModeNumber / posK(1) 
             antFreq = 80e6
             antFreq_rads = antFreq * 2.0 * pi
-            harmonicNumber  = 1
+            harmonicNumber  = 2
             omegaHere   = q * bMagHereK / mi
             resonanceCondition  = &
                 antFreq_rads - harmonicNumber * omegaHere - kPar * vParK
@@ -670,6 +670,7 @@ contains
             rcA = rcB
             rcB = resonanceCondition
 
+            !write(*,*) posK, rcA, rcB, stepCnt, q,mi, antFreq_rads, omegaHere, kPar*vParK
             if_resonant: &
             if ( rcA * rcB < 0 .and. stepCnt .gt. 2 ) then 
                 
@@ -785,6 +786,7 @@ contains
                     * ( abs (ePlusHere) * bFn_m1 &
                         + abs (eMinuHere) * bFn_p1 ))**2 * interactionTimeMin
 
+                !write(*,*) abs(ePlusHere), bFn_m1, abs(eMinuHere), bFn_p1, interactionTimeMin
                 mean_vPerp  = 0!D_vPerp / vPerpK * interactionTimeMin
 
                 randNo  = rand_lux_sgnE( int(mod(stepCnt,50000)+1) )-0.5
@@ -1531,7 +1533,7 @@ contains
             !write(*,*) 'dlg: ERROR - loop nan - ', nanErrorMsg
 
         endif
-    
+
    end subroutine gc_orbit 
 
 end module gc_integrate
