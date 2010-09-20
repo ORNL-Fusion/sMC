@@ -11,7 +11,9 @@ module eqdsk
         pres (:), ffprim (:), pprime (:), qpsi (:), &
         rbbbs (:), zbbbs (:), rlim (:), zlim (:), &
         r (:), z (:), bR(:,:), bPhi(:,:), bz(:,:), &
-        fluxGrid (:), fpolRZ(:,:), bMag(:,:)
+        fluxGrid (:), fpolRZ(:,:), bMag(:,:), &
+		fluxGrid_(:), fpol_(:)
+	logical :: ascending_flux
 
 contains
     subroutine read_geqdsk ( eqdsk_fileName, plot )
@@ -43,7 +45,8 @@ contains
 
         allocate ( fpol ( nw ), pres ( nw ), ffprim ( nw ), &
             pprime ( nw ), psizr ( nw, nh ), qpsi ( nw ), &
-            r ( nw ), z ( nh ), fluxGrid ( nw ) )
+            r ( nw ), z ( nh ), fluxGrid ( nw ), fpol_(nw), &
+            fluxGrid_(nw) )
         
         read ( 8, 2020 ) ( fpol (i), i=1, nw ) 
         read ( 8, 2020 ) ( pres (i), i=1, nw ) 
@@ -70,6 +73,10 @@ contains
        
         rStep   = rdim / ( nw - 1 )
         zStep   = zdim / ( nh - 1 )
+
+        ascending_flux = .false.
+        if ( siBry > siMag ) ascending_flux = .true.
+
         fStep   = ( sibry - simag ) / ( nw - 1 )
 
         r   = (/ (i,i=0,nw-1) /) * rStep + rleft
@@ -94,7 +101,16 @@ contains
        
         allocate ( xp(nw), yp(nw), temp(nw), ss(nw), fpolRZ(nw,nh), yp_c(nw) ) 
 
-        !   curv1 initialises the spline (fitpack.f)
+        !   force the fluxGrid to have an ascending order
+        if ( .not. ascending_flux ) then
+            write(*,*) 'NOTE:  Reversing the flux grid for curv1 (PERHAPS AN ITER EQDSK?)'
+            do i=1,nw 
+                fluxGrid_(i)    = fluxGrid(nw-i+1)
+                fpol_(i)    = fpol(nw-i+1)
+            enddo
+            fluxGrid    = fluxGrid_
+            fpol    = fpol_
+        endif
 
 !        call kurv1 ( nw, fluxGrid, fpol, spl1, spln, 3, xp, yp, temp, ss, 0.0, iErr )
         call curv1 ( nw, fluxGrid, fpol, spl1, spln, 3, yp_c, temp, sigma, iErr )
