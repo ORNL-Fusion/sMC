@@ -783,7 +783,7 @@ contains
                 !D_vPerp =  ( q / ( 2d0 * mi ) * abs (ePlusHere))**2 * interactionTimeMin
                 D_vPerp =  ( q / ( 2d0 * mi ) &
                     * ( abs (ePlusHere) * bFn_m1 &
-                        + abs (ePlusHere) * bFn_p1 ))**2 * interactionTimeMin
+                        + abs (eMinuHere) * bFn_p1 ))**2 * interactionTimeMin
 
                 mean_vPerp  = 0!D_vPerp / vPerpK * interactionTimeMin
 
