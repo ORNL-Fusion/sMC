@@ -1,6 +1,5 @@
 module read_mchoi
     implicit none
-    save
 
     real, allocatable :: mchoi_rho(:,:), &
         mchoi_theta(:,:), &
@@ -50,9 +49,13 @@ subroutine read_aorsa_fields ()
         integer :: eMinu_id, ePlus_img_id, eMinu_img_id, &
             kPer_cold_id, kPer_img_cold_id, R_id, z_id
 
+        write(*,*) 'Reading mchoi data file'
+
         !   Read in variables from .nc particle list file
 
         call check ( nf90_open ( path = mchoi_fileName, mode = nf90_nowrite, ncid = nc_id ) )
+
+        write(*,*) 'File opened'
 
         call check ( nf90_inq_varId ( nc_id, 'ePlus', ePlus_id ) )
         call check ( nf90_inq_varId ( nc_id, 'eMinu', eMinu_id ) )
@@ -70,6 +73,8 @@ subroutine read_aorsa_fields ()
             len = mchoi_nR ) ) 
          call check ( nf90_inquire_dimension ( nc_id, dim_ids(2), &
             len = mchoi_nz ) ) 
+
+        write(*,*) 'nR, nZ: ', mchoi_nR, mchoi_nz
 
          allocate ( mChoi_R(mchoi_nR), &
                     mChoi_z(mchoi_nz), &
@@ -96,6 +101,8 @@ subroutine read_aorsa_fields ()
         call check ( nf90_get_var ( nc_id, z_id, mchoi_z ) )
         
         call check ( nf90_close ( nc_id ) )
+
+        write(*,*) 'Mchoi file closed'
 
         mchoi_ePlus = cmplx ( mChoi_ePlus_real, mChoi_ePlus_img )
         mchoi_eMinu = cmplx ( mChoi_eMinu_real, mChoi_eMinu_img )
@@ -153,7 +160,7 @@ subroutine read_aorsa_fields ()
         if ( aStat .ne. 0 ) &
             write(*,*) 'dlg: ERROR - allocation failed in read_mchoi.f90'
 
-        allocate ( temp(mchoi_nR+mchoi_nR+mchoi_nz), &
+        allocate ( temp(mchoi_nz+mchoi_nz+mchoi_nR), &
             zp_ePlus_real(3*mchoi_nR*mchoi_nz), zp_eMinu_real(3*mchoi_nR*mchoi_nz), &
             zp_kPer_real(3*mchoi_nR*mchoi_nz), &
             zp_ePlus_img(3*mchoi_nR*mchoi_nz), zp_eMinu_img(3*mchoi_nR*mchoi_nz), &
@@ -173,10 +180,12 @@ subroutine read_aorsa_fields ()
         zp_eMinu_img    = 0
         zp_kPer_img = 0
 
+        write(*,*) 'About to initialise the mchoi interpolations'
+
         call surf1 ( mchoi_nR, mchoi_nz, mchoi_R, mchoi_z, mchoi_ePlus_real, mchoi_nR, zx1, zxm, &
             zy1, zyn, zxy11, zxym1, zxy1n, zxymn, islpsw, &
             zp_ePlus_real, temp, sigma, iErr)
- 
+
         call surf1 ( mchoi_nR, mchoi_nz, mchoi_R, mchoi_z, mchoi_eMinu_real, mchoi_nR, zx1, zxm, &
             zy1, zyn, zxy11, zxym1, zxy1n, zxymn, islpsw, &
             zp_eMinu_real, temp, sigma, iErr)
