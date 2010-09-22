@@ -46,7 +46,9 @@ pro plot_power, $
 	ncdf_varGet, cdfId, 'z', eField_z 
 	ncdf_close, cdfId
 
-
+	ePlus	= complex ( ePlusReal, ePlusImg )
+	eMinu	= complex ( eMinuReal, eMinuImg )
+stop
 	R_nBins	= n_elements ( power_R )
 	z_nBins	= n_elements ( power_z )
 
@@ -231,7 +233,7 @@ pro plot_power, $
 	levels	= ( fIndGen ( 31 ) - 15 ) / 15.0 * 6e3
 	colors	= bytScl ( levels , top = 253 ) + 1
 	
-	contour, (ePlusReal<max(levels))>min(levels), eField_R, eField_z, $
+	contour, (abs(ePlus)<max(levels))>min(levels), eField_R, eField_z, $
 			color = 255, $
 			levels = levels, $
 			c_colors = colors, $
@@ -252,7 +254,7 @@ pro plot_power, $
 
 	loadct, 13, file = 'data/davect.tbl'
 	
-	contour, (eMinuReal<max(levels))>min(levels), eField_R, eField_z, $
+	contour, (abs(eMinu)<max(levels))>min(levels), eField_R, eField_z, $
 			color = 255, $
 			levels = levels, $
 			c_colors = colors, $
@@ -272,7 +274,7 @@ pro plot_power, $
 		xsize=8, ysize=8,xoffset=.1, yoffset=.1, /encapsul
 	loadct, 13, file = 'data/davect.tbl'
 	!p.multi = 0
-	contour, (ePlusReal<max(levels))>min(levels), eField_R, eField_z, $
+	contour, (abs(ePlus)<max(levels))>min(levels), eField_R, eField_z, $
 			color = 255, $
 			levels = levels, $
 			c_colors = colors, $
@@ -295,7 +297,7 @@ pro plot_power, $
 		xsize=8, ysize=8,xoffset=.1, yoffset=.1, /encapsul
 	loadct, 13, file = 'data/davect.tbl'
 	!p.multi = 0
-	contour, (eMinuReal<max(levels))>min(levels), eField_R, eField_z, $
+	contour, (abs(eMinu)<max(levels))>min(levels), eField_R, eField_z, $
 			color = 255, $
 			levels = levels, $
 			c_colors = colors, $

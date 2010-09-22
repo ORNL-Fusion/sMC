@@ -13,7 +13,7 @@ module constants
     real(kind=DBL), parameter :: e0 = 8.854187d-12 
     real(kind=dbl), parameter :: protonMass = 1.67262d-27
     real(kind=dbl), parameter :: electronMass = 9.109382d-31 
-
+    complex, parameter :: ii = (0.0,1.0)
     real(kind=dbl) :: q
    
 contains

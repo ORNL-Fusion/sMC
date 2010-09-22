@@ -152,6 +152,8 @@ contains
         use collision_frequencies
         use bessJ_mod
         use airy_functions_real_single
+        use read_namelist, &
+        only: atomicZ, amu
 
         implicit none
        
@@ -182,6 +184,7 @@ contains
         
         real :: T, T_bgnd, coulombLog, vTh, start_T, rho_here
         real :: E_bgnd, density_bgnd, density
+        real :: q_m_cgs
         
 #if USE_DISLIN
  
@@ -725,7 +728,11 @@ contains
                      go to 321
                 endif
 
+                q_m_cgs = atomicZ * 4.8032d-10 / ( amu * 1.6726d-24 ) 
                 interactionTime = sqrt ( 2d0 * pi / ( q / mi * abs ( vParK * dBdS_ ) ) )
+                !write(*,*) 'SI: ', interactionTime
+                !interactionTime = sqrt ( 2d0 * pi / ( q_m_cgs * abs ( vParK*1d2 * dBdS_*1d4/3d10/1d2 ) ) )
+                !write(*,*) 'CGS: ', interactionTime
 
                 if ( interactionTime .ne. interactionTime ) then 
                         kickErr = 674
@@ -774,30 +781,26 @@ contains
             !   Apply kick to vPer
                
                 bArg    = real ( kPerHere ) * vPerpK / omegaHere 
-                !
-                !bFn_m2 = bessJ ( harmonicNumber-2, bArg) 
                 bFn_m1 = bessJ ( harmonicNumber-1, bArg) 
-                !bFn = bessJ ( harmonicNumber, bArg) 
                 bFn_p1 = bessJ ( harmonicNumber+1, bArg) 
-                !bFn_p2 = bessJ ( harmonicNumber+2, bArg) 
     
                 !D_vPerp =  ( q / ( 2d0 * mi ) * abs (ePlusHere))**2 * interactionTimeMin
-                D_vPerp =  ( q / ( 2d0 * mi ) &
-                    * ( abs (ePlusHere) * bFn_m1 &
-                        + abs (eMinuHere) * bFn_p1 ))**2 * interactionTimeMin
+                !D_vPerp =  ( q / ( 2d0 * mi ) &
+                !    * ( abs (ePlusHere) * bFn_m1 &
+                !        + abs (eMinuHere) * bFn_p1 ))**2 * interactionTimeMin
 
-                !write(*,*) abs(ePlusHere), bFn_m1, abs(eMinuHere), bFn_p1, interactionTimeMin
                 mean_vPerp  = 0!D_vPerp / vPerpK * interactionTimeMin
 
-                randNo  = rand_lux_sgnE( int(mod(stepCnt,50000)+1) )-0.5
-                !randNo  = rand_lux_sgnE( stepCnt )-0.5
-
-                randNo  = randNo / abs ( randNo )
-
+                randNo  = (rand_lux_sgnE( int(mod(stepCnt,50000)+1))-0.5)*2.0*pi
+                !randNo  = randNo / abs ( randNo )
                 if ( randNo .ne. randNo ) randNo = 1
 
-                dvPerp  = mean_vPerp &
-                    +  randNo * sqrt ( 2d0 *  D_vPerp * interactionTimeMin )
+                !dvPerp  = mean_vPerp &
+                !    +  randNo * sqrt ( 2d0 *  D_vPerp * interactionTimeMin )
+                !dvPerp  = sqrt ( ( q_m_cgs * abs(ePlusHere*1e6/3e10) )**2 * interactionTimeMin ) / 1e2
+
+                dvPerp  = q / ( 2 * mi ) * interactionTimeMin * &
+                    cos ( randNo ) * ( abs (ePlusHere) * bFn_m1 + abs (eMinuHere) * bFn_p1 ) 
 
                 dvPar   = kPar * vPerpK * dvPerp / ( harmonicNumber * omegaHere )
 
