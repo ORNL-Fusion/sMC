@@ -274,6 +274,7 @@ contains
         integer :: kickErr, collErr
         real :: dtR, dtZ, dtvPer, dtvPar, dt_rfSerial
         real :: time_off_QLgrid, time_bad_coll
+        real :: A_plus
 
         !   Initialize variables
         
@@ -801,6 +802,12 @@ contains
 
                 dvPerp  = q / ( 2 * mi ) * interactionTimeMin * &
                     cos ( randNo ) * ( abs (ePlusHere) * bFn_m1 + abs (eMinuHere) * bFn_p1 ) 
+
+                !A_plus  = q_m_cgs * ( abs (ePlusHere*1e6/3e10) ) * ( 1 - kPar * vParK / omegaHere )
+
+                !dvPerp  = sqrt ( 2 * pi * A_plus**2 * interactionTimeMin ) * cos ( randNo ) / 1d2
+
+                !write(*,*) dvPerp / vPerpK, ( 1 - kPar * vParK / omegaHere )
 
                 dvPar   = kPar * vPerpK * dvPerp / ( harmonicNumber * omegaHere )
 
