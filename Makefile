@@ -1,9 +1,9 @@
 OBJ = obj
 SRC = src
 MOD = mod
-EXEC = xsMC+rf.${MACHINE}
+EXEC = xsMC+rf
 
-ifeq ($(MACHINE),dlghp)
+ifeq (${HOSTNAME},dlg-hp.ornl.gov)
 
 	HOME = /home/dg6/code
 
@@ -22,6 +22,7 @@ ifeq ($(MACHINE),dlghp)
 	#PNETCDF = -I $(HOME)/pNetCdf/pnetcdf_pgi/include $(HOME)/pNetCdf/pnetcdf_pgi/lib/libpnetcdf.a
 
 endif
+
 ifeq ($(MACHINE),franklin)
 
 	#F77 = f77 -g	
@@ -69,7 +70,7 @@ ${OBJ}/collision_frequencies.o \
 ${OBJ}/beselJ.o \
 ${OBJ}/airy_functions.o
 
-ifeq (${MACHINE},dlghp)
+ifeq (${HOSTNAME},dlg-hp.ornl.gov)
 sMC-rf: ${SRC}/sMC-rf.f90 ${OBJECTS}
 	${F90} ${SRC}/sMC-rf.f90 -o ${EXEC} ${OBJECTS} ${WARN} ${NETCDF} ${DISLIN} ${PNETCDF}
 else
@@ -83,7 +84,7 @@ ${OBJ}/write_f_rzvv.o: ${SRC}/write_f_rzvv.f90 ${MOD}/powerAbsGrid.mod
 
 ${MOD}/gc_integrate.mod: ${SRC}/gc_integrate.F90 ${OBJ}/gc_integrate.o 
 
-ifeq ($(MACHINE),dlghp)
+ifeq (${HOSTNAME},dlg-hp.ornl.gov)
 ${OBJ}/gc_integrate.o: ${SRC}/gc_integrate.F90 ${MOD}/interp.mod ${MOD}/gc_terms.mod ${MOD}/read_namelist.mod ${MOD}/init_mpi.mod ${MOD}/luxury.mod ${MOD}/communications.mod ${MOD}/read_mchoi.mod ${MOD}/powerAbsGrid.mod ${MOD}/erf_external.mod ${MOD}/collision_frequencies.mod ${MOD}/bessJ_mod.mod ${OBJ}/airy_functions.o
 	${F90} -c ${SRC}/gc_integrate.F90 -o ${OBJ}/gc_integrate.o ${WARN} ${DISLIN} 
 else
