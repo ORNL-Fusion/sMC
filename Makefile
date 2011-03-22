@@ -9,7 +9,7 @@ GCCVER = /home/dg6/code/gcc/gcc-4.4.5
 CXX = ${GCCVER}/bin/g++
 CXXFLAGS = -Wall -g
 LDFLAGS = 
-INC = 
+INC = -I${INCDIR}
 
 SOURCES = $(basename $(wildcard $(SRCDIR)/*.cpp))
 OBJECTS = $(patsubst $(SRCDIR)/%,$(OBJDIR)/%.o,$(SOURCES))
@@ -19,7 +19,7 @@ ${EXEC}: ${OBJECTS}
 	${CXX} ${LDFLAGS} ${OBJECTS} -o $@
 
 ${OBJDIR}/%.o: ${SRCDIR}/%.cpp
-	${CXX} -c ${CXXFLAGS} $< -o $@
+	${CXX} -c ${INC} ${CXXFLAGS} $< -o $@
 
 .PHONY: clean
 
