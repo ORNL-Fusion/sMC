@@ -1,5 +1,5 @@
 #include <iostream>
-#include "eqdsk.h"
+#include "eqdsk.hpp"
 
 using namespace std;
 

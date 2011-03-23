@@ -1,5 +1,8 @@
-#ifndef EQDSK_H
-#define EQDSK_H
+#ifndef EQDSK_HPP_
+#define EQDSK_HPP_
+
+#include "Data.hpp"
+#include <vector>
 
 using namespace std;
 
@@ -13,10 +16,10 @@ class Ceqdsk {
 		float rdim,zdim,rcentr,rleft,zmid;
         float rmaxis,zmaxis,simag,sibry,bcentr;
         float current;
-		float *fpol, *pres, *ffprim, *pprime;
-		float **psizr, *r, *z, *fluxGrid;
-        float *qpsi, *rbbbs, *zbbbs, *rlim, *zlim;
-        float dr, dz, **br, **bz, **bp, **bmag;
+		vector<float> fpol, pres, ffprim, pprime,
+			r, z, fluxGrid, qpsi, rbbbs, zbbbs, rlim, zlim;
+		vector<vector<float> > psizr, br, bz, bp, bmag;
+        float dr, dz;
         bool ascending_flux;
 
         // functions 

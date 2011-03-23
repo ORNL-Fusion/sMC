@@ -1,6 +1,8 @@
 #include <iostream>
 #include <fstream>
-#include "eqdsk.h"
+#include <vector>
+#include "eqdsk.hpp"
+#include "deriv.hpp"
 
 using namespace std;
 
@@ -39,10 +41,10 @@ int Ceqdsk::read_file ( string fName ) {
 		cout << "sibry: " << sibry << endl;
 		cout << "bcentr: " << bcentr << endl;
 
-        fpol = new float[nw];
-        pres = new float[nw];
-        ffprim = new float[nw];
-        pprime = new float[nw];
+		fpol.resize(nw);
+		pres.resize(nw);
+		ffprim.resize(nw);
+		pprime.resize(nw);
 
 		for (int i=0;i<nw;i++)
 			inFile >> fpol[i];
@@ -56,9 +58,9 @@ int Ceqdsk::read_file ( string fName ) {
 		for (int i=0;i<nw;i++)
 			inFile >> pprime[i];
 
-        psizr = new float *[nw];
+        psizr.resize(nw);
         for (int i=0;i<nw;i++)
-            psizr[i] = new float[nh];
+            psizr[i].resize(nh);
 
 		for (int j=0;j<nh;j++)
 		{
@@ -68,23 +70,23 @@ int Ceqdsk::read_file ( string fName ) {
 			}
 		}	 
 
-        qpsi = new float[nw];
+        qpsi.resize(nw);
 
 		for (int i=0;i<nw;i++)
 			inFile >> qpsi[i];
 
         inFile >> nbbbs >> limitr;
 
-        rbbbs = new float[nbbbs];
-        zbbbs = new float[nbbbs];
+        rbbbs.resize(nbbbs);
+        zbbbs.resize(nbbbs);
 
         for (int i=0;i<nbbbs;i++)
         {
             inFile >> rbbbs[i] >> zbbbs[i];
         }
 
-        rlim = new float[limitr];
-        zlim = new float[limitr];
+        rlim.resize(limitr);
+        zlim.resize(limitr);
 
         for (int i=0;i<limitr;i++)
         {
@@ -105,8 +107,8 @@ int Ceqdsk::read_file ( string fName ) {
 
         float fStep = ( sibry - simag ) / ( nw - 1 );
 
-        r = new float[nw];
-        z = new float[nh];
+        r.resize(nw);
+        z.resize(nh);
 
         for (int i=0;i<nw;i++)
             r[i] = i * dr + rleft;
@@ -114,25 +116,34 @@ int Ceqdsk::read_file ( string fName ) {
         for (int j=0;j<nh;j++)
             z[j] = j * dz + zmid - zdim / 2.0;
 
-        fluxGrid = new float[nw];
+        fluxGrid.resize(nw);
         for (int i=0;i<nw;i++)
             fluxGrid[i] = i * fStep + simag;
 
-        br = new float *[nw];
+        br.resize(nw);
         for (int i=0;i<nw;i++)
-            br[i] = new float[nh];
+            br[i].resize(nh);
 
-        bz = new float *[nw];
+        bz.resize(nw);
         for (int i=0;i<nw;i++)
-            bz[i] = new float[nh];
+            bz[i].resize(nh);
 
-        bp = new float *[nw];
+        bp.resize(nw);
         for (int i=0;i<nw;i++)
-            bp[i] = new float[nh];
+            bp[i].resize(nh);
 
-        bmag = new float *[nw];
+        bmag.resize(nw);
         for (int i=0;i<nw;i++)
-            bmag[i] = new float[nh];
+            bmag[i].resize(nh);
+
+		for (int i=0;i<nw;i++)
+		{
+			vector<float> tmpData (nh);
+			vector<float> tmpRes (nw);
+			for (int j=0;j<nh;j++) tmpData[j] = psizr[i][j];
+
+        	tmpRes = deriv ( tmpData, dz );
+		}
 
 	}
 	else {

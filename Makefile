@@ -19,12 +19,13 @@ INC = -I${INCDIR}
 
 SOURCES = $(basename $(wildcard $(SRCDIR)/*.cpp))
 OBJECTS = $(patsubst $(SRCDIR)/%,$(OBJDIR)/%.o,$(SOURCES))
+INCLUDES = $(wildcard $(SRCDIR)/*.hpp)
 EXEC = ${BINDIR}/sMC
 
 ${EXEC}: ${OBJECTS}
 	${CXX} ${LDFLAGS} ${OBJECTS} -o $@
 
-${OBJDIR}/%.o: ${SRCDIR}/%.cpp
+${OBJDIR}/%.o: ${SRCDIR}/%.cpp ${INCLUDES}
 	${CXX} -c ${INC} ${CXXFLAGS} $< -o $@
 
 .PHONY: clean
