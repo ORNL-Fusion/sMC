@@ -10,6 +10,8 @@ int Ceqdsk::read_file ( string fName ) {
 
 	if ( inFile.good() ) {
 
+        // read data from file
+
 		int headerLength = 48;
 		header = new char [headerLength];
 
@@ -37,61 +39,101 @@ int Ceqdsk::read_file ( string fName ) {
 		cout << "sibry: " << sibry << endl;
 		cout << "bcentr: " << bcentr << endl;
 
-		for (int i=0;i<nw;i++)
-		{
-			float number;
-			inFile >> number;
-			fpol.push_back(number);
-		}
+        fpol = new float[nw];
+        pres = new float[nw];
+        ffprim = new float[nw];
+        pprime = new float[nw];
 
 		for (int i=0;i<nw;i++)
-		{
-			float number;
-			inFile >> number;
-			pres.push_back(number);
-		}
+			inFile >> fpol[i];
 
 		for (int i=0;i<nw;i++)
-		{
-			float number;
-			inFile >> number;
-			ffprim.push_back(number);
-		}
+			inFile >> pres[i];
 
 		for (int i=0;i<nw;i++)
-		{
-			float number;
-			inFile >> number;
-			pprime.push_back(number);
-		}
+			inFile >> ffprim[i];
 
-		psizr.reserve(nh);
+		for (int i=0;i<nw;i++)
+			inFile >> pprime[i];
+
+        psizr = new float *[nw];
+        for (int i=0;i<nw;i++)
+            psizr[i] = new float[nh];
+
 		for (int j=0;j<nh;j++)
-		{
-			vector<float> temp;
-			for (int i=0;i<nh;i++)
-			{
-				float number;
-				inFile >> number;
-				temp.push_back(number);
-			}
-			psizr.push_back(temp);
-		}
-
-
-		/*for (int j=0;j<nh;j++)
 		{
 			for (int i=0;i<nw;i++)
 			{
 				inFile >> psizr[i][j];
 			}
-		}*/	 
-		/*
-		qpsi ( nw ), &
-            r ( nw ), z ( nh ), fluxGrid ( nw ), fpol_(nw), &
-            fluxGrid_(nw) )
-			*/
- 
+		}	 
+
+        qpsi = new float[nw];
+
+		for (int i=0;i<nw;i++)
+			inFile >> qpsi[i];
+
+        inFile >> nbbbs >> limitr;
+
+        rbbbs = new float[nbbbs];
+        zbbbs = new float[nbbbs];
+
+        for (int i=0;i<nbbbs;i++)
+        {
+            inFile >> rbbbs[i] >> zbbbs[i];
+        }
+
+        rlim = new float[limitr];
+        zlim = new float[limitr];
+
+        for (int i=0;i<limitr;i++)
+        {
+            inFile >> rlim[i] >> zlim[i];
+        }
+
+        inFile.close ();
+
+
+        // Calculate other quantities from read data
+
+        dr   = rdim / ( nw - 1 );
+        dz   = zdim / ( nh - 1 );
+
+        ascending_flux = true;
+        if ( sibry > simag )
+            ascending_flux = false;
+
+        float fStep = ( sibry - simag ) / ( nw - 1 );
+
+        r = new float[nw];
+        z = new float[nh];
+
+        for (int i=0;i<nw;i++)
+            r[i] = i * dr + rleft;
+
+        for (int j=0;j<nh;j++)
+            z[j] = j * dz + zmid - zdim / 2.0;
+
+        fluxGrid = new float[nw];
+        for (int i=0;i<nw;i++)
+            fluxGrid[i] = i * fStep + simag;
+
+        br = new float *[nw];
+        for (int i=0;i<nw;i++)
+            br[i] = new float[nh];
+
+        bz = new float *[nw];
+        for (int i=0;i<nw;i++)
+            bz[i] = new float[nh];
+
+        bp = new float *[nw];
+        for (int i=0;i<nw;i++)
+            bp[i] = new float[nh];
+
+        bmag = new float *[nw];
+        for (int i=0;i<nw;i++)
+            bmag[i] = new float[nh];
+
 	}
 	else {
 

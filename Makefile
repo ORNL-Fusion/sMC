@@ -4,9 +4,15 @@ SRCDIR = src
 INCDIR = include
 BINDIR = bin
 
-GCCVER = /home/dg6/code/gcc/gcc-4.4.5
+GCCDIR = /home/dg6/code/gcc/gcc-4.4.5
 
-CXX = ${GCCVER}/bin/g++
+# Catch for greendl (my laptop)
+
+ifeq ($(findstring greendl,$(HOSTNAME_OSX)),greendl)
+	GCCDIR = /opt/local
+endif
+
+CXX = ${GCCDIR}/bin/g++
 CXXFLAGS = -Wall -g
 LDFLAGS = 
 INC = -I${INCDIR}
@@ -24,6 +30,4 @@ ${OBJDIR}/%.o: ${SRCDIR}/%.cpp
 .PHONY: clean
 
 clean:
-	echo ${SOURCES}
-	echo ${OBJECTS}
 	rm -f ${OBJDIR}/*.o ${EXEC}

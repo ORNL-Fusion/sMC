@@ -14,6 +14,7 @@ contains
     end subroutine dlg_check 
  
     function dlg_pDeriv ( array, dir, dS ) result ( dArray )
+
         implicit none
         
         real, dimension (:,:), allocatable :: dArray
@@ -83,7 +84,7 @@ contains
                             -3.0 * array(i,j) + 4.0 * array(i+1,j) &
                             - array(i+2,j) )
 
-                    if ( i == 0 ) &
+                    if ( i == 1 ) &
                         dArray(i,j) = 1.0 / ( 12.0 * dS ) * &
                             ( &
                             -25.0 * array(i,j) + 48.0 * array(i+1,j) &
