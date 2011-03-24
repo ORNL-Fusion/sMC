@@ -4,7 +4,24 @@ SRCDIR = src
 INCDIR = include
 BINDIR = bin
 
+SOURCES = $(basename $(wildcard $(SRCDIR)/*.cpp))
+OBJECTS = $(patsubst $(SRCDIR)/%,$(OBJDIR)/%.o,$(SOURCES))
+INCLUDES = $(wildcard $(SRCDIR)/*.hpp)
+EXEC = ${BINDIR}/sMC
+LIBS =
+INC = -I${INCDIR}
+
 GCCDIR = /home/dg6/code/gcc/gcc-4.4.5
+
+ALGLIBDIR = /home/dg6/code/alglib/cpp/src
+ALGLIB = $(wildcard $(ALGLIBDIR)/*.o)
+OBJECTS += ${ALGLIB} 
+INC += -I${ALGLIBDIR}
+
+NETCDFDIR = /home/dg6/code/netcdf/netcdf_gnu64
+NETCDF = -L${NETCDFDIR}/lib -lnetcdf_c++ -lnetcdf
+LIBS += ${NETCDF}
+INC += -I${NETCDFDIR}/include
 
 # Catch for greendl (my laptop)
 
@@ -14,16 +31,10 @@ endif
 
 CXX = ${GCCDIR}/bin/g++
 CXXFLAGS = -Wall -g
-LDFLAGS = 
-INC = -I${INCDIR}
-
-SOURCES = $(basename $(wildcard $(SRCDIR)/*.cpp))
-OBJECTS = $(patsubst $(SRCDIR)/%,$(OBJDIR)/%.o,$(SOURCES))
-INCLUDES = $(wildcard $(SRCDIR)/*.hpp)
-EXEC = ${BINDIR}/sMC
+LDFLAGS =
 
 ${EXEC}: ${OBJECTS}
-	${CXX} ${LDFLAGS} ${OBJECTS} -o $@
+	${CXX} ${LDFLAGS} ${OBJECTS} ${LIBS} -o $@
 
 ${OBJDIR}/%.o: ${SRCDIR}/%.cpp ${INCLUDES}
 	${CXX} -c ${INC} ${CXXFLAGS} $< -o $@
