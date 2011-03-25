@@ -14,6 +14,7 @@ INC = -I${INCDIR}
 GCCDIR = /home/dg6/code/gcc/gcc-4.4.5
 ALGLIBDIR = /home/dg6/code/alglib/cpp/src
 NETCDFDIR = /home/dg6/code/netcdf/netcdf_gnu64
+BOOSTDIR = /usr/include
 
 # Catch for greendl (my laptop)
 
@@ -30,6 +31,8 @@ INC += -I${ALGLIBDIR}
 NETCDF = -L${NETCDFDIR}/lib -lnetcdf_c++ -lnetcdf
 LIBS += ${NETCDF}
 INC += -I${NETCDFDIR}/include
+
+INC += -I${BOOSTDIR}
 
 CXX = ${GCCDIR}/bin/g++
 CXXFLAGS = -Wall -g

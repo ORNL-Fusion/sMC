@@ -1,10 +1,8 @@
 #ifndef EQDSK_HPP_
 #define EQDSK_HPP_
 
-#include "Data.hpp"
 #include <vector>
-
-using namespace std;
+#include "data2D.hpp"
 
 class Ceqdsk {
 
@@ -16,15 +14,16 @@ class Ceqdsk {
 		float rdim,zdim,rcentr,rleft,zmid;
         float rmaxis,zmaxis,simag,sibry,bcentr;
         float current;
-		vector<float> fpol, pres, ffprim, pprime,
+		std::vector<float> fpol, pres, ffprim, pprime,
 			r, z, fluxGrid, qpsi, rbbbs, zbbbs, rlim, zlim;
-		vector<vector<float> > psizr, br, bz, bp, bmag, fpolzr;
+		std::vector<std::vector<float> > psizr, br, bz, bp, bmag, fpolzr;
         float dr, dz;
         bool ascending_flux;
 
         // functions 
-		int read_file ( string );
-		int write_ncfile ( string );
+		int read_file ( std::string );
+		int write_ncfile ( std::string );
+		int bCurvature ();
 
 	private:
 

@@ -46,6 +46,7 @@ int Ceqdsk::read_file ( string fName ) {
 		cout << "\t sibry: " << sibry << endl;
 		cout << "\t bcentr: " << bcentr << endl;
 
+		//fpol = new std::vector<float> (nCol);
 		fpol.resize(nCol);
 		pres.resize(nCol);
 		ffprim.resize(nCol);
@@ -67,9 +68,9 @@ int Ceqdsk::read_file ( string fName ) {
         for (int j=0;j<nCol;j++)
             psizr[j].resize(nRow);
 
-		for (int j=0;j<nCol;j++)
+		for (int i=0;i<nRow;i++)
 		{
-			for (int i=0;i<nRow;i++)
+			for (int j=0;j<nCol;j++)
 			{
 				inFile >> psizr[i][j];
 			}
@@ -149,7 +150,7 @@ int Ceqdsk::read_file ( string fName ) {
 			for (int i=0;i<nRow;i++) 
 				tmpData[i] = psizr[i][j];
 
-        	tmpRes = deriv ( tmpData, dz );
+        	tmpRes = deriv ( tmpData, dz, 4 );
 
 			for (int i=0;i<nRow;i++)
 				br[i][j] = -tmpRes[i] / r[j];
@@ -167,7 +168,7 @@ int Ceqdsk::read_file ( string fName ) {
 			for (int j=0;j<nCol;j++) 
 				tmpData[j] = psizr[i][j];
 
-        	tmpRes = deriv ( tmpData, dr );
+        	tmpRes = deriv ( tmpData, dr, 4 );
 			for (int j=0;j<nCol;j++)
 				bz[i][j] = tmpRes[j] / r[j];
 
@@ -202,7 +203,7 @@ int Ceqdsk::read_file ( string fName ) {
 			for(int i=0;i<nRow;i++) {
 
 				fpolzr[i][j] = alglib::spline1dcalc(AG_s,psizr[i][j]);
-				bp[i][j] = fpolzr[i][j] / r[i];
+				bp[i][j] = fpolzr[i][j] / r[j];
 
 			}
 		}
@@ -254,13 +255,32 @@ int Ceqdsk::write_ncfile ( const string fName ) {
 	NcVar *nc_bp = dataFile.add_var ("bp", ncFloat, zDim, rDim );
 	NcVar *nc_bz = dataFile.add_var ("bz", ncFloat, zDim, rDim );
 	NcVar *nc_bmag = dataFile.add_var ("bmag", ncFloat, zDim, rDim );
-	NcVar *nc_psizr = dataFile.add_var ("psizr", ncFloat, zDim, rDim );
+	NcVar *nc_psizr = dataFile.add_var ("psizr", ncFloat, rDim, zDim );
+	NcVar *nc_fpolzr = dataFile.add_var ("fpolzr", ncFloat, rDim, zDim );
 
-	nc_br->put(&br[0][0],nRow,nCol);
-	nc_bp->put(&bp[0][0],nRow,nCol);
-	nc_bz->put(&bz[0][0],nRow,nCol);
-	nc_bmag->put(&bmag[0][0],nRow,nCol);
-	nc_psizr->put(&psizr[0][0],nRow,nCol);
+	for(int i=0;i<nRow;i++) {
+		for(int j=0;j<nCol;j++) {
+
+			nc_psizr->set_cur(i,j);
+			nc_psizr->put(&psizr[i][j],1,1);
+
+			nc_br->set_cur(i,j);
+			nc_br->put(&br[i][j],1,1);
+
+			nc_bp->set_cur(i,j);
+			nc_bp->put(&bp[i][j],1,1);
+
+			nc_bz->set_cur(i,j);
+			nc_bz->put(&bz[i][j],1,1);
+
+			nc_bmag->set_cur(i,j);
+			nc_bmag->put(&bmag[i][j],1,1);
+
+			nc_fpolzr->set_cur(i,j);
+			nc_fpolzr->put(&fpolzr[i][j],1,1);
+	
+		}
+	}
 
 	NcVar *nc_fpol = dataFile.add_var ("fpol", ncFloat, rDim );
 	NcVar *nc_fluxGrid = dataFile.add_var ("fluxGrid", ncFloat, rDim );
@@ -269,6 +289,12 @@ int Ceqdsk::write_ncfile ( const string fName ) {
 	nc_fluxGrid->put(&fluxGrid[0],nCol);
 
 	cout << "DONE." << endl;
+
+	return 0;
+}
+
+int Ceqdsk::bCurvature () {
+
 
 	return 0;
 }
