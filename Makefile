@@ -12,22 +12,24 @@ LIBS =
 INC = -I${INCDIR}
 
 GCCDIR = /home/dg6/code/gcc/gcc-4.4.5
-
 ALGLIBDIR = /home/dg6/code/alglib/cpp/src
-ALGLIB = $(wildcard $(ALGLIBDIR)/*.o)
-OBJECTS += ${ALGLIB} 
-INC += -I${ALGLIBDIR}
-
 NETCDFDIR = /home/dg6/code/netcdf/netcdf_gnu64
-NETCDF = -L${NETCDFDIR}/lib -lnetcdf_c++ -lnetcdf
-LIBS += ${NETCDF}
-INC += -I${NETCDFDIR}/include
 
 # Catch for greendl (my laptop)
 
 ifeq ($(findstring greendl,$(HOSTNAME_OSX)),greendl)
 	GCCDIR = /opt/local
+	ALGLIBDIR = /home/dg6/code/alglib/cpp/src
+	NETCDFDIR = /opt/local
 endif
+
+ALGLIB = $(wildcard $(ALGLIBDIR)/*.o)
+OBJECTS += ${ALGLIB} 
+INC += -I${ALGLIBDIR}
+
+NETCDF = -L${NETCDFDIR}/lib -lnetcdf_c++ -lnetcdf
+LIBS += ${NETCDF}
+INC += -I${NETCDFDIR}/include
 
 CXX = ${GCCDIR}/bin/g++
 CXXFLAGS = -Wall -g
