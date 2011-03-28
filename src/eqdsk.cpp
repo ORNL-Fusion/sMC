@@ -7,6 +7,7 @@
 #include <cmath>
 #include <netcdfcpp.h>
 #include "boost/multi_array.hpp"
+#include "physics.hpp"
 
 using namespace std;
 
@@ -25,7 +26,7 @@ int Ceqdsk::read_file ( string fName ) {
 
 		inFile.read ( header, headerLength );
 
-		inFile >> idum >> nCol >> nRow;	
+		inFile >> idum >> nCol_ >> nRow_;	
 		inFile >> rdim >> zdim >> rcentr >> rleft >> zmid;
         inFile >> rmaxis >> zmaxis >> simag >> sibry >> bcentr;
         inFile >> current >> simag >> xdum >> rmaxis >> xdum; 
@@ -33,8 +34,8 @@ int Ceqdsk::read_file ( string fName ) {
 
 		cout << "\t header: " << header << endl;
 		cout << "\t idum: " << idum << endl;
-		cout << "\t nCol: " << nCol << endl;
-		cout << "\t nRow: " << nRow << endl;
+		cout << "\t nCol_: " << nCol_ << endl;
+		cout << "\t nRow_: " << nRow_ << endl;
 
 		cout << "\t rdim: " << rdim << endl;
 		cout << "\t zdim: " << zdim << endl;
@@ -47,37 +48,36 @@ int Ceqdsk::read_file ( string fName ) {
 		cout << "\t sibry: " << sibry << endl;
 		cout << "\t bcentr: " << bcentr << endl;
 
-		//fpol = new std::vector<float> (nCol);
-		fpol.resize(nCol);
-		pres.resize(nCol);
-		ffprim.resize(nCol);
-		pprime.resize(nCol);
+		fpol.resize(nCol_);
+		pres.resize(nCol_);
+		ffprim.resize(nCol_);
+		pprime.resize(nCol_);
 
-		for (int j=0;j<nCol;j++)
+		for (int j=0;j<nCol_;j++)
 			inFile >> fpol[j];
 
-		for (int j=0;j<nCol;j++)
+		for (int j=0;j<nCol_;j++)
 			inFile >> pres[j];
 
-		for (int j=0;j<nCol;j++)
+		for (int j=0;j<nCol_;j++)
 			inFile >> ffprim[j];
 
-		for (int j=0;j<nCol;j++)
+		for (int j=0;j<nCol_;j++)
 			inFile >> pprime[j];
 
-		psizr.resize(boost::extents[nRow][nCol]);
+		psizr.resize(boost::extents[nRow_][nCol_]);
 
-		for (int i=0;i<nRow;i++)
+		for (int i=0;i<nRow_;i++)
 		{
-			for (int j=0;j<nCol;j++)
+			for (int j=0;j<nCol_;j++)
 			{
 				inFile >> psizr[i][j];
 			}
 		}	 
 
-        qpsi.resize(nCol);
+        qpsi.resize(nCol_);
 
-		for (int j=0;j<nCol;j++)
+		for (int j=0;j<nCol_;j++)
 			inFile >> qpsi[j];
 
         inFile >> nbbbs >> limitr;
@@ -103,44 +103,44 @@ int Ceqdsk::read_file ( string fName ) {
 
         // Calculate other quantities from read data
 
-        dr   = rdim / ( nCol - 1 );
-        dz   = zdim / ( nRow - 1 );
+        dr   = rdim / ( nCol_ - 1 );
+        dz   = zdim / ( nRow_ - 1 );
 
         ascending_flux = true;
         if ( sibry > simag )
             ascending_flux = false;
 
-        float fStep = ( sibry - simag ) / ( nCol - 1 );
+        float fStep = ( sibry - simag ) / ( nCol_ - 1 );
 
-        r.resize(nCol);
-        z.resize(nRow);
+        r.resize(nCol_);
+        z.resize(nRow_);
 
-        for (int j=0;j<nCol;j++)
+        for (int j=0;j<nCol_;j++)
             r[j] = j * dr + rleft;
 
-        for (int i=0;i<nRow;i++)
+        for (int i=0;i<nRow_;i++)
             z[i] = i * dz + zmid - zdim / 2.0;
 
-        fluxGrid.resize(nCol);
-        for (int j=0;j<nCol;j++)
+        fluxGrid.resize(nCol_);
+        for (int j=0;j<nCol_;j++)
             fluxGrid[j] = j * fStep + simag;
 
-        br.resize(boost::extents[nRow][nCol]);
-        bz.resize(boost::extents[nRow][nCol]);
-        bp.resize(boost::extents[nRow][nCol]);
-        bmag.resize(boost::extents[nRow][nCol]);
+        br.resize(boost::extents[nRow_][nCol_]);
+        bz.resize(boost::extents[nRow_][nCol_]);
+        bp.resize(boost::extents[nRow_][nCol_]);
+        bmag.resize(boost::extents[nRow_][nCol_]);
 
 		// br = -dpsi/dz * 1/r
-		for (int j=0;j<nCol;j++)
+		for (int j=0;j<nCol_;j++)
 		{
-			vector<float> tmpData (nRow);
-			vector<float> tmpRes (nCol);
-			for (int i=0;i<nRow;i++) 
+			vector<float> tmpData (nRow_);
+			vector<float> tmpRes (nCol_);
+			for (int i=0;i<nRow_;i++) 
 				tmpData[i] = psizr[i][j];
 
         	tmpRes = deriv ( tmpData, dz, 4 );
 
-			for (int i=0;i<nRow;i++)
+			for (int i=0;i<nRow_;i++)
 				br[i][j] = -tmpRes[i] / r[j];
 
 		}
@@ -149,15 +149,15 @@ int Ceqdsk::read_file ( string fName ) {
 		cout << "\t dz: " << dz << endl;
 
 		// bz = dpsi/dr * 1/r
-		for (int i=0;i<nRow;i++)
+		for (int i=0;i<nRow_;i++)
 		{
-			vector<float> tmpData (nCol);
-			vector<float> tmpRes (nRow);
-			for (int j=0;j<nCol;j++) 
+			vector<float> tmpData (nCol_);
+			vector<float> tmpRes (nRow_);
+			for (int j=0;j<nCol_;j++) 
 				tmpData[j] = psizr[i][j];
 
         	tmpRes = deriv ( tmpData, dr, 4 );
-			for (int j=0;j<nCol;j++)
+			for (int j=0;j<nCol_;j++)
 				bz[i][j] = tmpRes[j] / r[j];
 
 		}
@@ -176,17 +176,17 @@ int Ceqdsk::read_file ( string fName ) {
 		std::vector<double> fpol_dbl(fpol.begin(),fpol.end());
 
 		// Population the ALGLIB arrays
-		AG_fluxGrid.setcontent(nCol,&fluxGrid_dbl[0]);
-		AG_fpol.setcontent(nCol,&fpol_dbl[0]);
+		AG_fluxGrid.setcontent(nCol_,&fluxGrid_dbl[0]);
+		AG_fpol.setcontent(nCol_,&fpol_dbl[0]);
 
 		// Build the spline
 		alglib::spline1dbuildcubic ( AG_fluxGrid, AG_fpol, AG_s );
 
 		// Calculate fpol on the 2D r,z mesh
-		fpolzr.resize(boost::extents[nRow][nCol]);
+		fpolzr.resize(boost::extents[nRow_][nCol_]);
 
-		for (int j=0;j<nCol;j++) {
-			for(int i=0;i<nRow;i++) {
+		for (int j=0;j<nCol_;j++) {
+			for(int i=0;i<nRow_;i++) {
 
 				fpolzr[i][j] = alglib::spline1dcalc(AG_s,psizr[i][j]);
 				bp[i][j] = fpolzr[i][j] / r[j];
@@ -195,8 +195,8 @@ int Ceqdsk::read_file ( string fName ) {
 		}
 
 		// Magnitude of b
-		for (int j=0;j<nCol;j++) {
-			for (int i=0;i<nRow;i++) {
+		for (int j=0;j<nCol_;j++) {
+			for (int i=0;i<nRow_;i++) {
 				bmag[i][j] = 
 					sqrt ( pow(br[i][j],2)+pow(bp[i][j],2)+pow(bz[i][j],2) );
 				//cout <<i<<" "<<j<<" "<<bmag[i][j] <<" "<<psizr[i][j]<<endl;
@@ -228,14 +228,14 @@ int Ceqdsk::write_ncfile ( const string fName ) {
 		return 1;
 	}	
 
-	NcDim *rDim = dataFile.add_dim("nr",nCol);
-	NcDim *zDim = dataFile.add_dim("nz",nRow);
+	NcDim *rDim = dataFile.add_dim("nr",nCol_);
+	NcDim *zDim = dataFile.add_dim("nz",nRow_);
 
 	NcVar *nc_r = dataFile.add_var ("r", ncFloat, rDim );
 	NcVar *nc_z = dataFile.add_var ("z", ncFloat, zDim );
 
-	nc_r->put(&r[0],nCol);
-	nc_z->put(&z[0],nRow);
+	nc_r->put(&r[0],nCol_);
+	nc_z->put(&z[0],nRow_);
 
 	NcVar *nc_br = dataFile.add_var ("br", ncFloat, zDim, rDim );
 	NcVar *nc_bp = dataFile.add_var ("bp", ncFloat, zDim, rDim );
@@ -244,26 +244,184 @@ int Ceqdsk::write_ncfile ( const string fName ) {
 	NcVar *nc_psizr = dataFile.add_var ("psizr", ncFloat, rDim, zDim );
 	NcVar *nc_fpolzr = dataFile.add_var ("fpolzr", ncFloat, rDim, zDim );
 
-	nc_psizr->put(&psizr[0][0],nRow,nCol);
-	nc_fpolzr->put(&fpolzr[0][0],nRow,nCol);
-	nc_br->put(&br[0][0],nRow,nCol);
-	nc_bp->put(&bp[0][0],nRow,nCol);
-	nc_bz->put(&bz[0][0],nRow,nCol);
-	nc_bmag->put(&bmag[0][0],nRow,nCol);
+	nc_psizr->put(&psizr[0][0],nRow_,nCol_);
+	nc_fpolzr->put(&fpolzr[0][0],nRow_,nCol_);
+	nc_br->put(&br[0][0],nRow_,nCol_);
+	nc_bp->put(&bp[0][0],nRow_,nCol_);
+	nc_bz->put(&bz[0][0],nRow_,nCol_);
+	nc_bmag->put(&bmag[0][0],nRow_,nCol_);
 
 	NcVar *nc_fpol = dataFile.add_var ("fpol", ncFloat, rDim );
 	NcVar *nc_fluxGrid = dataFile.add_var ("fluxGrid", ncFloat, rDim );
 
-	nc_fpol->put(&fpol[0],nCol);
-	nc_fluxGrid->put(&fluxGrid[0],nCol);
+	nc_fpol->put(&fpol[0],nCol_);
+	nc_fluxGrid->put(&fluxGrid[0],nCol_);
 
 	cout << "DONE." << endl;
 
 	return 0;
 }
 
-int Ceqdsk::bCurvature () {
 
+int Ceqdsk::bForceTerms () {
+
+	cout << "Calculating the B force terms ..." << endl;
+
+	int Z = 1;
+	arr2D_ wc(boost::extents[nRow_][nCol_]);
+	arr2D_ br_B(boost::extents[nRow_][nCol_]);
+	arr2D_ bp_B(boost::extents[nRow_][nCol_]);
+	arr2D_ bz_B(boost::extents[nRow_][nCol_]);
+
+	for(int j=0;j<nCol_;j++){
+		for(int i=0;i<nRow_;i++){
+
+			wc[i][j] = Z * physics::_e * bmag[i][j] / physics::_mi;
+			br_B[i][j] = br[i][j] / bmag[i][j];
+			bp_B[i][j] = bp[i][j] / bmag[i][j];
+			bz_B[i][j] = bz[i][j] / bmag[i][j];
+
+		}
+	}
+
+	arr2D_ br_B_dr(boost::extents[nRow_][nCol_]);
+	arr2D_ br_B_dz(boost::extents[nRow_][nCol_]);
+	arr2D_ bp_B_dr(boost::extents[nRow_][nCol_]);
+	arr2D_ bp_B_dz(boost::extents[nRow_][nCol_]);
+	arr2D_ bz_B_dr(boost::extents[nRow_][nCol_]);
+	arr2D_ bz_B_dz(boost::extents[nRow_][nCol_]);
+
+	gradB_r.resize(boost::extents[nRow_][nCol_]);
+	gradB_z.resize(boost::extents[nRow_][nCol_]); 
+
+	arr2D_ lnB(boost::extents[nRow_][nCol_]);
+	arr2D_ lnB_dr(boost::extents[nRow_][nCol_]);
+	arr2D_ lnB_dz(boost::extents[nRow_][nCol_]);
+
+	for(int j=0;j<nCol_;j++) {
+		for(int i=0;i<nRow_;i++)
+			lnB[i][j] = log ( bmag[i][j] );
+	}	
+
+	// do the dr derivatives ...
+
+	std::vector<float> tmpIn (nCol_);
+	std::vector<float> tmpOut (nCol_);
+	
+	for(int i=0;i<nRow_;i++) {
+
+		for(int j=0;j<nCol_;j++) tmpIn[j] = br_B[i][j];
+    	tmpOut = deriv ( tmpIn, dr, 4 );
+		for(int j=0;j<nCol_;j++) br_B_dr[i][j] = tmpOut[j];
+
+		for(int j=0;j<nCol_;j++) tmpIn[j] = bp_B[i][j];
+    	tmpOut = deriv ( tmpIn, dr, 4 );
+		for(int j=0;j<nCol_;j++) bp_B_dr[i][j] = tmpOut[j];
+
+		for(int j=0;j<nCol_;j++) tmpIn[j] = bz_B[i][j];
+    	tmpOut = deriv ( tmpIn, dr, 4 );
+		for(int j=0;j<nCol_;j++) bz_B_dr[i][j] = tmpOut[j];
+
+		for(int j=0;j<nCol_;j++) tmpIn[j] = bmag[i][j];
+    	tmpOut = deriv ( tmpIn, dr, 4 );
+		for(int j=0;j<nCol_;j++) gradB_r[i][j] = tmpOut[j];
+
+		for(int j=0;j<nCol_;j++) tmpIn[j] = lnB[i][j];
+    	tmpOut = deriv ( tmpIn, dr, 4 );
+		for(int j=0;j<nCol_;j++) lnB_dr[i][j] = tmpOut[j];
+	}
+
+	// do the dz derivatives ...
+
+	tmpIn.resize(nRow_);
+	tmpOut.resize(nRow_);
+	
+	for(int j=0;j<nCol_;j++) {
+
+		for(int i=0;i<nRow_;i++) tmpIn[i] = br_B[i][j];
+    	tmpOut = deriv ( tmpIn, dz, 4 );
+		for(int i=0;i<nRow_;i++) br_B_dz[i][j] = tmpOut[i];
+		
+		for(int i=0;i<nRow_;i++) tmpIn[i] = bp_B[i][j];
+    	tmpOut = deriv ( tmpIn, dz, 4 );
+		for(int i=0;i<nRow_;i++) bp_B_dz[i][j] = tmpOut[i];
+
+		for(int i=0;i<nRow_;i++) tmpIn[i] = bz_B[i][j];
+    	tmpOut = deriv ( tmpIn, dz, 4 );
+		for(int i=0;i<nRow_;i++) bz_B_dz[i][j] = tmpOut[i];
+
+		for(int i=0;i<nRow_;i++) tmpIn[i] = bmag[i][j];
+    	tmpOut = deriv ( tmpIn, dz, 4 );
+		for(int i=0;i<nRow_;i++) gradB_z[i][j] = tmpOut[i];
+
+		for(int i=0;i<nRow_;i++) tmpIn[i] = lnB[i][j];
+    	tmpOut = deriv ( tmpIn, dz, 4 );
+		for(int i=0;i<nRow_;i++) lnB_dz[i][j] = tmpOut[i];
+	}
+
+	arr2D_ bDotGradB_r(boost::extents[nRow_][nCol_]);
+	arr2D_ bDotGradB_p(boost::extents[nRow_][nCol_]);
+	arr2D_ bDotGradB_z(boost::extents[nRow_][nCol_]);
+
+	bCurvature_r.resize(boost::extents[nRow_][nCol_]);
+	bCurvature_p.resize(boost::extents[nRow_][nCol_]);
+	bCurvature_z.resize(boost::extents[nRow_][nCol_]);
+
+	for(int j=0;j<nCol_;j++) {
+		for(int i=0;i<nRow_;i++) {
+
+        	bDotGradB_r[i][j] = br_B[i][j]  * br_B_dr[i][j] 
+					+ bz_B[i][j]  * br_B_dz[i][j] 
+				   	- pow ( bp_B[i][j], 2 ) / r[j];
+
+        	bDotGradB_p[i][j] = bp_B[i][j] * br_B[i][j] / r[j] 
+					+ br_B[i][j] * bp_B_dr[i][j] 
+					+ bz_B[i][j] * bp_B_dz[i][j];
+
+        	bDotGradB_z[i][j] = br_B[i][j] * bz_B_dr[i][j] 
+					+ bz_B[i][j] * bz_B_dz[i][j];
+
+        	bCurvature_r[i][j] = ( 
+							bp_B[i][j] * bDotGradB_z[i][j] 
+							- bz_B[i][j] * bDotGradB_p[i][j] 
+							) / wc[i][j];
+        	bCurvature_p[i][j]   = -1.0 * ( 
+							br_B[i][j] * bDotGradB_z[i][j] 
+							- bz_B[i][j] * bDotGradB_r[i][j] 
+							) / wc[i][j];
+        	bCurvature_z[i][j] = ( 
+							br_B[i][j] * bDotGradB_p[i][j] 
+							- bp_B[i][j] * bDotGradB_r[i][j] 
+							) / wc[i][j];
+		}
+	}
+
+	// Also in here is the b.Grad b for calculating vPar
+
+	bDotGradB.resize(boost::extents[nRow_][nCol_]);
+
+	for(int j=0;j<nCol_;j++) {
+		for(int i=0;i<nRow_;i++) {
+			bDotGradB[i][j] = br_B[i][j] * gradB_r[i][j] 
+					+ bz_B[i][j] * gradB_z[i][j];
+		}
+	}	
+
+	bGradient_r.resize(boost::extents[nRow_][nCol_]);
+	bGradient_p.resize(boost::extents[nRow_][nCol_]);
+	bGradient_z.resize(boost::extents[nRow_][nCol_]);
+
+	for(int j=0;j<nCol_;j++) {
+		for(int i=0;i<nRow_;i++) {
+	
+			bGradient_r[i][j] = bp_B[i][j] * lnB_dz[i][j] / ( 2.0 * wc[i][j] );
+			bGradient_p[i][j] = -1.0 * ( br_B[i][j] * lnB_dz[i][j] 
+							- bz_B[i][j]  * lnB_dr[i][j] ) / ( 2.0 * wc[i][j] );
+			bGradient_z[i][j] = -1.0 * bp_B[i][j] * lnB_dr[i][j] / ( 2.0 * wc[i][j] );
+		}
+	}
+
+	cout << "DONE." << endl;
 
 	return 0;
 }
