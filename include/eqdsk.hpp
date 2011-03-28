@@ -2,7 +2,7 @@
 #define EQDSK_HPP_
 
 #include <vector>
-#include "data2D.hpp"
+#include "boost/multi_array.hpp"
 
 class Ceqdsk {
 
@@ -14,9 +14,9 @@ class Ceqdsk {
 		float rdim,zdim,rcentr,rleft,zmid;
         float rmaxis,zmaxis,simag,sibry,bcentr;
         float current;
+		boost::multi_array<float,2> psizr, br, bz, bp, bmag, fpolzr;
 		std::vector<float> fpol, pres, ffprim, pprime,
 			r, z, fluxGrid, qpsi, rbbbs, zbbbs, rlim, zlim;
-		std::vector<std::vector<float> > psizr, br, bz, bp, bmag, fpolzr;
         float dr, dz;
         bool ascending_flux;
 

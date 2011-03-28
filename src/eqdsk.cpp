@@ -6,6 +6,7 @@
 #include "interpolation.h"
 #include <cmath>
 #include <netcdfcpp.h>
+#include "boost/multi_array.hpp"
 
 using namespace std;
 
@@ -64,9 +65,7 @@ int Ceqdsk::read_file ( string fName ) {
 		for (int j=0;j<nCol;j++)
 			inFile >> pprime[j];
 
-        psizr.resize(nCol);
-        for (int j=0;j<nCol;j++)
-            psizr[j].resize(nRow);
+		psizr.resize(boost::extents[nRow][nCol]);
 
 		for (int i=0;i<nRow;i++)
 		{
@@ -126,21 +125,10 @@ int Ceqdsk::read_file ( string fName ) {
         for (int j=0;j<nCol;j++)
             fluxGrid[j] = j * fStep + simag;
 
-        br.resize(nCol);
-        for (int j=0;j<nCol;j++)
-            br[j].resize(nRow);
-
-        bz.resize(nCol);
-        for (int j=0;j<nCol;j++)
-            bz[j].resize(nRow);
-
-        bp.resize(nCol);
-        for (int j=0;j<nCol;j++)
-            bp[j].resize(nRow);
-
-        bmag.resize(nCol);
-        for (int j=0;j<nCol;j++)
-            bmag[j].resize(nRow);
+        br.resize(boost::extents[nRow][nCol]);
+        bz.resize(boost::extents[nRow][nCol]);
+        bp.resize(boost::extents[nRow][nCol]);
+        bmag.resize(boost::extents[nRow][nCol]);
 
 		// br = -dpsi/dz * 1/r
 		for (int j=0;j<nCol;j++)
@@ -195,9 +183,7 @@ int Ceqdsk::read_file ( string fName ) {
 		alglib::spline1dbuildcubic ( AG_fluxGrid, AG_fpol, AG_s );
 
 		// Calculate fpol on the 2D r,z mesh
-		fpolzr.resize(nCol);
-		for (int j=0;j<nCol;j++)
-			fpolzr[j].resize(nRow);
+		fpolzr.resize(boost::extents[nRow][nCol]);
 
 		for (int j=0;j<nCol;j++) {
 			for(int i=0;i<nRow;i++) {
@@ -258,29 +244,12 @@ int Ceqdsk::write_ncfile ( const string fName ) {
 	NcVar *nc_psizr = dataFile.add_var ("psizr", ncFloat, rDim, zDim );
 	NcVar *nc_fpolzr = dataFile.add_var ("fpolzr", ncFloat, rDim, zDim );
 
-	for(int i=0;i<nRow;i++) {
-		for(int j=0;j<nCol;j++) {
-
-			nc_psizr->set_cur(i,j);
-			nc_psizr->put(&psizr[i][j],1,1);
-
-			nc_br->set_cur(i,j);
-			nc_br->put(&br[i][j],1,1);
-
-			nc_bp->set_cur(i,j);
-			nc_bp->put(&bp[i][j],1,1);
-
-			nc_bz->set_cur(i,j);
-			nc_bz->put(&bz[i][j],1,1);
-
-			nc_bmag->set_cur(i,j);
-			nc_bmag->put(&bmag[i][j],1,1);
-
-			nc_fpolzr->set_cur(i,j);
-			nc_fpolzr->put(&fpolzr[i][j],1,1);
-	
-		}
-	}
+	nc_psizr->put(&psizr[0][0],nRow,nCol);
+	nc_fpolzr->put(&fpolzr[0][0],nRow,nCol);
+	nc_br->put(&br[0][0],nRow,nCol);
+	nc_bp->put(&bp[0][0],nRow,nCol);
+	nc_bz->put(&bz[0][0],nRow,nCol);
+	nc_bmag->put(&bmag[0][0],nRow,nCol);
 
 	NcVar *nc_fpol = dataFile.add_var ("fpol", ncFloat, rDim );
 	NcVar *nc_fluxGrid = dataFile.add_var ("fluxGrid", ncFloat, rDim );
