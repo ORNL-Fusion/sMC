@@ -1,72 +1,87 @@
 #include "eqdsk.hpp"
 #include "particle.hpp"
+#include "constants.hpp"
 #include <iostream>
 
+using namespace constants;
+using namespace std;
 
-// bi-linear interpolation
-// see wikipedia ;)
+int average_vGC 
+	(const C_rkGCparticle &p1, 
+	 const C_rkGCparticle &p2, 
+	 const C_rkGCparticle &p3, 
+	 const C_rkGCparticle &p4, 
+	 C_rkGCparticle &pf, const float dt) {
 
-float bilinear_interp_data 
-    ( float i, float j, int i1, int i2, int j1, int j2, eqdsk::arr2D_ &data ) {
+	pf.v_r = ( p1.v_r + 2.0 * p2.v_r + 2.0 * p3.v_r + p4.v_r ) / 6.0;
+	pf.v_p = ( p1.v_p + 2.0 * p2.v_p + 2.0 * p3.v_p + p4.v_p ) / 6.0;
+	pf.v_z = ( p1.v_z + 2.0 * p2.v_z + 2.0 * p3.v_z + p4.v_z ) / 6.0;
 
-	float f11 = data[i1][j1];
-	float f21 = data[i2][j1];
-	float f12 = data[i1][j2];
-	float f22 = data[i2][j2];
+	pf.r	= p1.r + dt * pf.v_r;
+	pf.p	= p1.p + dt * pf.v_p;
+	pf.z	= p1.z + dt * pf.v_z;
 
-	// (x2-x1)(y2-y1) == 1 since i'm using indices
-
-	float dataOut = f11 * (i2-i)*(j2-j)
-			+ f21 * (i-i1)*(j2-j)
-			+ f12 * (i2-i)*(j-j1)
-			+ f22 * (i-i1)*(j-j1); 
-
-    return dataOut;
+	return 0;	
 }
 
-int eq_o_motion ( Cparticle &p0, Cparticle &p1, Ceqdsk &eqdsk ) {
+// Fill in position, mu and vPar for the next rk4 step.
+int euler ( const C_rkGCparticle &p1, C_rkGCparticle &p2, const float dt ) {
+
+	p2.mu = p1.mu;
+
+	p2.r = p1.r + p1.v_r * dt / 2.0; 
+	p2.p = p1.p + p1.v_p * dt / 2.0; 
+	p2.z = p1.z + p1.v_z * dt / 2.0; 
+
+	p2.vPar = p1.dvPar_dt * dt / 2.0;
+
+	return 0;
+}
+
+// Calculate vGC given position, mu and vPar.
+int vGC ( C_rkGCparticle &p0, Ceqdsk &eqdsk ) {
 
 	// get background data(s) at particle location
-	
-	p0.row = (p0.r - eqdsk.r.front()) / ( eqdsk.r.back() - eqdsk.r.front() )
-		 		* eqdsk.r.size();
-	p0.col = (p0.z - eqdsk.z.front()) / ( eqdsk.z.back() - eqdsk.z.front() )
-		 		* eqdsk.z.size();
 
-	int x1 = floor(p0.row);
-	int x2 = ceil(p0.row);
-	int y1 = floor(p0.col);
-	int y2 = ceil(p0.col);
+	Ceqdsk::interpIndex index;
 
-    // Check if particle is off grid	
-    if( x1<0 || x2>=eqdsk.nRow_ ||
-        y1<0 || y2>=eqdsk.nCol_ ) {
+	int stat = eqdsk.get_index ( p0.r, p0.z, index );
 
-        std::cout << "\tERROR: position outside eqdsk grid." << std::endl;
-        std::cout << "\tx1: " << x1 << std::endl;
-        std::cout << "\tx2: " << x2 << std::endl;
-        std::cout << "\ty1: " << y1 << std::endl;
-        std::cout << "\ty2: " << y2 << std::endl;
+	if(stat) { return 1; }
 
-        return 1;
-    }
+	cout << "\tfloat i: "<<index.i << endl;
+	cout << "\tfloat j: "<<index.j << endl;
 
-	std::cout << "\tp0.row: "<<p0.row<<std::endl;
-	std::cout << "\tp0.col: "<<p0.col<<std::endl;
+    p0.bmag = eqdsk.bilinear_interp ( index, eqdsk.bmag );
 
-    float bmag_p0 = bilinear_interp_data ( p0.row, p0.col, x1, x2, y1, y2, eqdsk.bmag );
+    p0.b_r = eqdsk.bilinear_interp ( index, eqdsk.br );
+    p0.b_p = eqdsk.bilinear_interp ( index, eqdsk.bp );
+    p0.b_z = eqdsk.bilinear_interp ( index, eqdsk.bz );
 
-    float br_p0 = bilinear_interp_data ( p0.row, p0.col, x1, x2, y1, y2, eqdsk.br );
-    float bp_p0 = bilinear_interp_data ( p0.row, p0.col, x1, x2, y1, y2, eqdsk.bp );
-    float bz_p0 = bilinear_interp_data ( p0.row, p0.col, x1, x2, y1, y2, eqdsk.bz );
+    p0.bCurv_r = eqdsk.bilinear_interp ( index, eqdsk.bCurvature_r );
+    p0.bCurv_p = eqdsk.bilinear_interp ( index, eqdsk.bCurvature_p );
+    p0.bCurv_z = eqdsk.bilinear_interp ( index, eqdsk.bCurvature_z );
 
-    float bCurvature_r_p0 = bilinear_interp_data ( p0.row, p0.col, x1, x2, y1, y2, eqdsk.bCurvature_r );
-    float bCurvature_p_p0 = bilinear_interp_data ( p0.row, p0.col, x1, x2, y1, y2, eqdsk.bCurvature_p );
-    float bCurvature_z_p0 = bilinear_interp_data ( p0.row, p0.col, x1, x2, y1, y2, eqdsk.bCurvature_z );
+    p0.bGrad_r = eqdsk.bilinear_interp ( index, eqdsk.bGradient_r );
+    p0.bGrad_p = eqdsk.bilinear_interp ( index, eqdsk.bGradient_p );
+    p0.bGrad_z = eqdsk.bilinear_interp ( index, eqdsk.bGradient_z );
 
-    float bGradient_r_p0 = bilinear_interp_data ( p0.row, p0.col, x1, x2, y1, y2, eqdsk.bGradient_r );
-    float bGradient_p_p0 = bilinear_interp_data ( p0.row, p0.col, x1, x2, y1, y2, eqdsk.bGradient_p );
-    float bGradient_z_p0 = bilinear_interp_data ( p0.row, p0.col, x1, x2, y1, y2, eqdsk.bGradient_z );
+    p0.bDotGradB = eqdsk.bilinear_interp ( index, eqdsk.bDotGradB );
+
+	p0.unitb_r = p0.b_r / p0.bmag;
+	p0.unitb_p = p0.b_p / p0.bmag;
+	p0.unitb_z = p0.b_z / p0.bmag;
+
+	// vPer
+	p0.vPer = sqrt ( 2.0 * p0.mu * p0.bmag / _mi );
+
+	// vGC
+	p0.v_r = p0.vPar * p0.unitb_r + pow(p0.vPer,2) * p0.bGrad_r + pow(p0.vPar,2) * p0.bCurv_r;
+	p0.v_p = p0.vPar * p0.unitb_p + pow(p0.vPer,2) * p0.bGrad_p + pow(p0.vPar,2) * p0.bCurv_p;
+	p0.v_z = p0.vPar * p0.unitb_z + pow(p0.vPer,2) * p0.bGrad_z + pow(p0.vPar,2) * p0.bCurv_z;
+
+	// dvPar_dt
+	p0.dvPar_dt = -p0.mu / _mi * p0.bDotGradB;
 
 	return 0;
 }

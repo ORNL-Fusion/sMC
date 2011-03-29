@@ -7,9 +7,57 @@
 #include <cmath>
 #include <netcdfcpp.h>
 #include "boost/multi_array.hpp"
-#include "physics.hpp"
+#include "constants.hpp"
 
 using namespace std;
+using namespace constants;
+
+int Ceqdsk::get_index 
+	( const float rIn, const float zIn, Ceqdsk::interpIndex &index ) {
+
+	index.i = (rIn - r.front()) / ( r.back() - r.front() ) * r.size();
+	index.j = (zIn - z.front()) / ( z.back() - z.front() ) * z.size();
+
+	index.i1 = floor(index.i);
+	index.i2 = ceil(index.i);
+	index.j1 = floor(index.j);
+	index.j2 = ceil(index.j);
+
+    // Check if particle is off grid	
+    if( index.i1<0 || index.i2>=nRow_ ||
+        index.j1<0 || index.j2>=nCol_ ) {
+
+        cout << "\tERROR: position outside eqdsk grid." << endl;
+        cout << "\ti1: " << index.i1 << endl;
+        cout << "\ti2: " << index.i2 << endl;
+        cout << "\tj1: " << index.j1 << endl;
+        cout << "\tj2: " << index.j2 << endl;
+
+        return 1;
+    }
+
+	return 0;
+}
+
+// bi-linear interpolation
+// see wikipedia ;)
+float Ceqdsk::bilinear_interp 
+    ( const Ceqdsk::interpIndex &index , const eqdsk::arr2D_ &data ) {
+
+	float f11 = data[index.i1][index.j1];
+	float f21 = data[index.i2][index.j1];
+	float f12 = data[index.i1][index.j2];
+	float f22 = data[index.i2][index.j2];
+
+	// (x2-x1)(y2-y1) == 1 since i'm using indices
+
+	float dataOut = f11 * (index.i2-index.i)*(index.j2-index.j)
+			+ f21 * (index.i-index.i1)*(index.j2-index.j)
+			+ f12 * (index.i2-index.i)*(index.j-index.j1)
+			+ f22 * (index.i-index.i1)*(index.j-index.j1); 
+
+    return dataOut;
+}
 
 int Ceqdsk::read_file ( string fName ) {
 
@@ -276,7 +324,7 @@ int Ceqdsk::bForceTerms () {
 	for(int j=0;j<nCol_;j++){
 		for(int i=0;i<nRow_;i++){
 
-			wc[i][j] = Z * physics::_e * bmag[i][j] / physics::_mi;
+			wc[i][j] = Z * _e * bmag[i][j] / _mi;
 			br_B[i][j] = br[i][j] / bmag[i][j];
 			bp_B[i][j] = bp[i][j] / bmag[i][j];
 			bz_B[i][j] = bz[i][j] / bmag[i][j];

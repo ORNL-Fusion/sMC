@@ -10,7 +10,7 @@ namespace eqdsk {
 }
 
 using namespace eqdsk;
-	
+
 class Ceqdsk {
 		
 	private:
@@ -39,11 +39,21 @@ class Ceqdsk {
 			   gradB_r, gradB_z, bDotGradB, 
 			   bGradient_r, bGradient_p, bGradient_z;
 
+		class interpIndex {
+
+			public: 
+				float i, j;
+				int i1, i2, j1, j2;
+		};
+
         // functions 
 		int read_file ( std::string );
 		int write_ncfile ( std::string );
 		int bForceTerms ();
-
+		int get_index 
+			( const float r, const float z, interpIndex &index );
+		float bilinear_interp 
+    		( const interpIndex &index , const eqdsk::arr2D_ &data );
 };
 
 #endif
