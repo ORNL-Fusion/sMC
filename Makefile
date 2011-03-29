@@ -22,6 +22,7 @@ ifeq ($(findstring greendl,$(HOSTNAME_OSX)),greendl)
 	GCCDIR = /opt/local
 	ALGLIBDIR = /home/dg6/code/alglib/cpp/src
 	NETCDFDIR = /opt/local
+	BOOSTDIR = /opt/local/lib/boost
 endif
 
 ALGLIB = $(wildcard $(ALGLIBDIR)/*.o)

@@ -12,7 +12,9 @@ int main ()
 	cout << "sMC ... c++ & CUDA version :)" << endl;
 
 
-	string fName = "data/g129x129_1051206002.01120.cmod";
+	//string fName = "data/g129x129_1051206002.01120.cmod";
+	string fName = "data/g122080.03100";
+
 	Ceqdsk eqdsk;	
 	int stat;
 	stat = eqdsk.read_file ( fName );
@@ -25,8 +27,7 @@ int main ()
 	p0.p = 0.0;
 	p0.z = 0.0;
 
-	p1 = eq_o_motion ( p0, eqdsk );
-
+	stat = eq_o_motion ( p0, p1, eqdsk );
 
 	cout << "End of program :)" << endl;
 

@@ -4,17 +4,22 @@
 #include <vector>
 #include "boost/multi_array.hpp"
 
+namespace eqdsk {
+    typedef boost::multi_array<float,2> arr2D_;
+    typedef std::vector<float> arr1D_;
+}
+
+using namespace eqdsk;
+	
 class Ceqdsk {
 		
 	private:
 
 		float xdum;
-		int nCol_, nRow_;
-
-		typedef boost::multi_array<float,2> arr2D_;
-		typedef std::vector<float> arr1D_;
 
 	public:
+
+	    int nCol_, nRow_;
 
         // variables
 		char *header;
