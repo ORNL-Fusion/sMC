@@ -13,7 +13,7 @@ using namespace std;
 using namespace constants;
 
 int Ceqdsk::get_index 
-	( const float rIn, const float zIn, Ceqdsk::interpIndex &index ) {
+	( const REAL rIn, const REAL zIn, Ceqdsk::interpIndex &index ) {
 
 	index.i = (rIn - r.front()) / ( r.back() - r.front() ) * r.size();
 	index.j = (zIn - z.front()) / ( z.back() - z.front() ) * z.size();
@@ -24,15 +24,8 @@ int Ceqdsk::get_index
 	index.j2 = ceil(index.j);
 
     // Check if particle is off grid	
-    if( index.i1<0 || index.i2>=nRow_ ||
-        index.j1<0 || index.j2>=nCol_ ) {
-
-        cout << "\tERROR: position outside eqdsk grid." << endl;
-        cout << "\ti1: " << index.i1 << endl;
-        cout << "\ti2: " << index.i2 << endl;
-        cout << "\tj1: " << index.j1 << endl;
-        cout << "\tj2: " << index.j2 << endl;
-
+    if( index.i1<0 || index.i2>=(nRow_-1) ||
+        index.j1<0 || index.j2>=(nCol_-1) ) {
         return 1;
     }
 
@@ -41,17 +34,17 @@ int Ceqdsk::get_index
 
 // bi-linear interpolation
 // see wikipedia ;)
-float Ceqdsk::bilinear_interp 
+REAL Ceqdsk::bilinear_interp 
     ( const Ceqdsk::interpIndex &index , const eqdsk::arr2D_ &data ) {
 
-	float f11 = data[index.i1][index.j1];
-	float f21 = data[index.i2][index.j1];
-	float f12 = data[index.i1][index.j2];
-	float f22 = data[index.i2][index.j2];
+	REAL f11 = data[index.i1][index.j1];
+	REAL f21 = data[index.i2][index.j1];
+	REAL f12 = data[index.i1][index.j2];
+	REAL f22 = data[index.i2][index.j2];
 
 	// (x2-x1)(y2-y1) == 1 since i'm using indices
 
-	float dataOut = f11 * (index.i2-index.i)*(index.j2-index.j)
+	REAL dataOut = f11 * (index.i2-index.i)*(index.j2-index.j)
 			+ f21 * (index.i-index.i1)*(index.j2-index.j)
 			+ f12 * (index.i2-index.i)*(index.j-index.j1)
 			+ f22 * (index.i-index.i1)*(index.j-index.j1); 
@@ -158,7 +151,7 @@ int Ceqdsk::read_file ( string fName ) {
         if ( sibry > simag )
             ascending_flux = false;
 
-        float fStep = ( sibry - simag ) / ( nCol_ - 1 );
+        REAL fStep = ( sibry - simag ) / ( nCol_ - 1 );
 
         r.resize(nCol_);
         z.resize(nRow_);
@@ -181,8 +174,8 @@ int Ceqdsk::read_file ( string fName ) {
 		// br = -dpsi/dz * 1/r
 		for (int j=0;j<nCol_;j++)
 		{
-			vector<float> tmpData (nRow_);
-			vector<float> tmpRes (nCol_);
+			vector<REAL> tmpData (nRow_);
+			vector<REAL> tmpRes (nCol_);
 			for (int i=0;i<nRow_;i++) 
 				tmpData[i] = psizr[i][j];
 
@@ -199,8 +192,8 @@ int Ceqdsk::read_file ( string fName ) {
 		// bz = dpsi/dr * 1/r
 		for (int i=0;i<nRow_;i++)
 		{
-			vector<float> tmpData (nCol_);
-			vector<float> tmpRes (nRow_);
+			vector<REAL> tmpData (nCol_);
+			vector<REAL> tmpRes (nRow_);
 			for (int j=0;j<nCol_;j++) 
 				tmpData[j] = psizr[i][j];
 
@@ -219,7 +212,7 @@ int Ceqdsk::read_file ( string fName ) {
 		alglib::real_1d_array AG_fpol;
 		alglib::spline1dinterpolant AG_s;
 
-		// AGLIB is double only, so copy float vectors to double
+		// AGLIB is double only, so copy REAL vectors to double
 		std::vector<double> fluxGrid_dbl(fluxGrid.begin(),fluxGrid.end());
 		std::vector<double> fpol_dbl(fpol.begin(),fpol.end());
 
@@ -353,8 +346,8 @@ int Ceqdsk::bForceTerms () {
 
 	// do the dr derivatives ...
 
-	std::vector<float> tmpIn (nCol_);
-	std::vector<float> tmpOut (nCol_);
+	std::vector<REAL> tmpIn (nCol_);
+	std::vector<REAL> tmpOut (nCol_);
 	
 	for(int i=0;i<nRow_;i++) {
 

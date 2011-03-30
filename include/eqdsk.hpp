@@ -3,10 +3,11 @@
 
 #include <vector>
 #include "boost/multi_array.hpp"
+#include "constants.hpp"
 
 namespace eqdsk {
-    typedef boost::multi_array<float,2> arr2D_;
-    typedef std::vector<float> arr1D_;
+    typedef boost::multi_array<REAL,2> arr2D_;
+    typedef std::vector<REAL> arr1D_;
 }
 
 using namespace eqdsk;
@@ -15,7 +16,7 @@ class Ceqdsk {
 		
 	private:
 
-		float xdum;
+		REAL xdum;
 
 	public:
 
@@ -24,15 +25,15 @@ class Ceqdsk {
         // variables
 		char *header;
 		int idum,  nbbbs, limitr;
-		float rdim,zdim,rcentr,rleft,zmid;
-        float rmaxis,zmaxis,simag,sibry,bcentr;
-        float current;
+		REAL rdim,zdim,rcentr,rleft,zmid;
+        REAL rmaxis,zmaxis,simag,sibry,bcentr;
+        REAL current;
 
 		arr2D_ psizr, br, bz, bp, bmag, fpolzr;
 		arr1D_ fpol, pres, ffprim, pprime,
 			r, z, fluxGrid, qpsi, rbbbs, zbbbs, rlim, zlim;
 
-        float dr, dz;
+        REAL dr, dz;
         bool ascending_flux;
 
 		arr2D_ bCurvature_r, bCurvature_p, bCurvature_z,
@@ -42,7 +43,7 @@ class Ceqdsk {
 		class interpIndex {
 
 			public: 
-				float i, j;
+				REAL i, j;
 				int i1, i2, j1, j2;
 		};
 
@@ -51,8 +52,8 @@ class Ceqdsk {
 		int write_ncfile ( std::string );
 		int bForceTerms ();
 		int get_index 
-			( const float r, const float z, interpIndex &index );
-		float bilinear_interp 
+			( const REAL r, const REAL z, interpIndex &index );
+		REAL bilinear_interp 
     		( const interpIndex &index , const eqdsk::arr2D_ &data );
 };
 

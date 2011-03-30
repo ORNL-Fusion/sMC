@@ -11,7 +11,7 @@ int average_vGC
 	 const C_rkGCparticle &p2, 
 	 const C_rkGCparticle &p3, 
 	 const C_rkGCparticle &p4, 
-	 C_rkGCparticle &pf, const float dt) {
+	 C_rkGCparticle &pf, const REAL dt) {
 
 	pf.v_r = ( p1.v_r + 2.0 * p2.v_r + 2.0 * p3.v_r + p4.v_r ) / 6.0;
 	pf.v_p = ( p1.v_p + 2.0 * p2.v_p + 2.0 * p3.v_p + p4.v_p ) / 6.0;
@@ -21,69 +21,72 @@ int average_vGC
 	pf.p	= p1.p + dt * pf.v_p;
 	pf.z	= p1.z + dt * pf.v_z;
 
+	pf.vPar = ( p1.vPar + 2.0 * p2.vPar + 2.0 * p3.vPar + p4.vPar ) / 6.0;
+	
+	pf.mu = p1.mu;
+
 	return 0;	
 }
 
 // Fill in position, mu and vPar for the next rk4 step.
-int euler ( const C_rkGCparticle &p1, C_rkGCparticle &p2, const float dt ) {
+int euler ( const C_rkGCparticle &p1, C_rkGCparticle &p2, const REAL dt ) {
 
 	p2.mu = p1.mu;
 
-	p2.r = p1.r + p1.v_r * dt / 2.0; 
-	p2.p = p1.p + p1.v_p * dt / 2.0; 
-	p2.z = p1.z + p1.v_z * dt / 2.0; 
+	p2.r = p1.r + p1.v_r * dt; 
+	p2.p = p1.p + p1.v_p * dt; 
+	p2.z = p1.z + p1.v_z * dt; 
 
-	p2.vPar = p1.dvPar_dt * dt / 2.0;
+	p2.vPar = p1.vPar + p1.dvPar_dt * dt;
 
 	return 0;
 }
 
 // Calculate vGC given position, mu and vPar.
-int vGC ( C_rkGCparticle &p0, Ceqdsk &eqdsk ) {
+CK& vGC ( REAL dt, CK &p0, REAL mu, REAL vPar0, Ceqdsk &eqdsk, int err ) {
 
 	// get background data(s) at particle location
-
+	
 	Ceqdsk::interpIndex index;
+	err = eqdsk.get_index ( p0.r, p0.z, index );
 
-	int stat = eqdsk.get_index ( p0.r, p0.z, index );
+	//cout << "\t"<< __FILE__ << endl;
+	//cout << "\tREAL i: "<<index.i << endl;
+	//cout << "\tREAL j: "<<index.j << endl;
 
-	if(stat) { return 1; }
+    REAL bmag = eqdsk.bilinear_interp ( index, eqdsk.bmag );
 
-	cout << "\tfloat i: "<<index.i << endl;
-	cout << "\tfloat j: "<<index.j << endl;
+    REAL b_r = eqdsk.bilinear_interp ( index, eqdsk.br );
+    REAL b_p = eqdsk.bilinear_interp ( index, eqdsk.bp );
+    REAL b_z = eqdsk.bilinear_interp ( index, eqdsk.bz );
 
-    p0.bmag = eqdsk.bilinear_interp ( index, eqdsk.bmag );
+    REAL bCurv_r = eqdsk.bilinear_interp ( index, eqdsk.bCurvature_r );
+    REAL bCurv_p = eqdsk.bilinear_interp ( index, eqdsk.bCurvature_p );
+    REAL bCurv_z = eqdsk.bilinear_interp ( index, eqdsk.bCurvature_z );
 
-    p0.b_r = eqdsk.bilinear_interp ( index, eqdsk.br );
-    p0.b_p = eqdsk.bilinear_interp ( index, eqdsk.bp );
-    p0.b_z = eqdsk.bilinear_interp ( index, eqdsk.bz );
+    REAL bGrad_r = eqdsk.bilinear_interp ( index, eqdsk.bGradient_r );
+    REAL bGrad_p = eqdsk.bilinear_interp ( index, eqdsk.bGradient_p );
+    REAL bGrad_z = eqdsk.bilinear_interp ( index, eqdsk.bGradient_z );
 
-    p0.bCurv_r = eqdsk.bilinear_interp ( index, eqdsk.bCurvature_r );
-    p0.bCurv_p = eqdsk.bilinear_interp ( index, eqdsk.bCurvature_p );
-    p0.bCurv_z = eqdsk.bilinear_interp ( index, eqdsk.bCurvature_z );
+    REAL bDotGradB = eqdsk.bilinear_interp ( index, eqdsk.bDotGradB );
 
-    p0.bGrad_r = eqdsk.bilinear_interp ( index, eqdsk.bGradient_r );
-    p0.bGrad_p = eqdsk.bilinear_interp ( index, eqdsk.bGradient_p );
-    p0.bGrad_z = eqdsk.bilinear_interp ( index, eqdsk.bGradient_z );
-
-    p0.bDotGradB = eqdsk.bilinear_interp ( index, eqdsk.bDotGradB );
-
-	p0.unitb_r = p0.b_r / p0.bmag;
-	p0.unitb_p = p0.b_p / p0.bmag;
-	p0.unitb_z = p0.b_z / p0.bmag;
+	REAL unitb_r = b_r / bmag;
+	REAL unitb_p = b_p / bmag;
+	REAL unitb_z = b_z / bmag;
 
 	// vPer
-	p0.vPer = sqrt ( 2.0 * p0.mu * p0.bmag / _mi );
+	REAL vPer = sqrt ( 2.0 * mu * bmag / _mi );
+	// dvPar_dt
+	REAL dvPar_dt = -mu / _mi * bDotGradB;
+	REAL vPar = vPar0 + dvPar_dt * dt;
 
 	// vGC
-	p0.v_r = p0.vPar * p0.unitb_r + pow(p0.vPer,2) * p0.bGrad_r + pow(p0.vPar,2) * p0.bCurv_r;
-	p0.v_p = p0.vPar * p0.unitb_p + pow(p0.vPer,2) * p0.bGrad_p + pow(p0.vPar,2) * p0.bCurv_p;
-	p0.v_z = p0.vPar * p0.unitb_z + pow(p0.vPer,2) * p0.bGrad_z + pow(p0.vPar,2) * p0.bCurv_z;
+	CK vGC;
+	vGC.r = vPar * unitb_r + pow(vPer,2) * bGrad_r + pow(vPar,2) * bCurv_r;
+	vGC.p = vPar * unitb_p + pow(vPer,2) * bGrad_p + pow(vPar,2) * bCurv_p;
+	vGC.z = vPar * unitb_z + pow(vPer,2) * bGrad_z + pow(vPar,2) * bCurv_z;
 
-	// dvPar_dt
-	p0.dvPar_dt = -p0.mu / _mi * p0.bDotGradB;
-
-	return 0;
+	return vGC;
 }
 
 

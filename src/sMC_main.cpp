@@ -30,46 +30,86 @@ int main ()
 
 	// Get bMag @ particle locations and calculate mu.
 	Ceqdsk::interpIndex index;
-	float bmag_p;
+	REAL bmag_p;
 	for(unsigned int p=0;p<particles.size();p++){
 		stat = eqdsk.get_index(particles[p].r,particles[p].z,index);
 		bmag_p = eqdsk.bilinear_interp ( index, eqdsk.bmag );
 		particles[p].mu = _mi * (particles[p].vPer,2) / ( 2.0 * bmag_p );
-		cout<<particles[p].mu<<endl;
 	}	
 
-	float dt = 1e-8;
+	REAL dt = 1e-8;
+	int err = 0;
 
-	C_rkGCparticle rkp1, rkp2, rkp3, rkp4, rkpf;
+	//C_rkGCparticle rkp1, rkp2, rkp3, rkp4, rkpf;
+	CK K1, K2, K3, K4, K5, K6, w, w_;
 
-	for(int p=0;p<10;p++) {
+	for(int p=0;p<1;p++) {
 
-		// Initialize the first step integrator particle
-		rkp1.r = particles[p].r; 
-		rkp1.p = particles[p].r; 
-		rkp1.z = particles[p].r; 
+		if(!particles[p].status) {
 
-		rkp1.vPer = particles[p].vPer;
-		rkp1.vPar = particles[p].vPar;
-		
-		rkp1.mu = particles[p].mu;
+			cout << "Particle No. " << p << endl;
 
-		for(int t=0;t<1;t++) {
+			// Initial position w
 
-			// Given a position, mu and vPar calculate vGC
-			stat = vGC ( rkp1, eqdsk );
+			w.r = particles[p].r;
+			w.p = particles[p].p;
+			w.z = particles[p].z;
 
-			stat = euler ( rkp1, rkp2, dt / 2.0);
-			stat = vGC ( rkp2, eqdsk );
+			for(int t=0;t<1;t++) {
 
-			stat = euler ( rkp2, rkp3, dt / 2.0);
-			stat = vGC ( rkp3, eqdsk );
+				// Given a position, mu and vPar calculate vGC
+				w_ = w;
+				K1 = vGC ( 0.0, 
+								w_, particles[p].mu, particles[p].vPar, eqdsk, err ) * dt;
 
-			stat = euler ( rkp3, rkp4, dt);
-			stat = vGC ( rkp4, eqdsk );
+				w_ = w + K1 * (1.0/4.0);
+				K2 = vGC ( 1.0/4.0 * dt, 
+								w_, particles[p].mu, particles[p].vPar, eqdsk, err ) * dt;
 
-			stat = average_vGC ( rkp1, rkp2, rkp3, rkp4, rkpf, dt );
+				w_ = w + K1 * (3.0/32.0) 
+						+ K2 * (9.0/32.0);
+				K3 = vGC ( 3.0/8.0 * dt, 
+								w_, particles[p].mu, particles[p].vPar, eqdsk, err ) * dt;
 
+				w_ = w + K1 * (1932.0/2179.0) 
+						+ K2 * (-7200.0/2197.0) 
+						+ K3 * (7296.0/2197.0);
+				K4 = vGC ( 12.0/13.0 * dt, 
+								w_, particles[p].mu, particles[p].vPar, eqdsk, err ) * dt;
+
+				w_ = w + K1 * (439.0/216.0) 
+						+ K2 * (-8.0) 
+						+ K3 * (3680.0/513.9)
+						+ K4 * (-845.0/4104.0);
+				K5 = vGC ( dt, 
+								w_, particles[p].mu, particles[p].vPar, eqdsk, err ) * dt;
+
+				w_ = w + K1 * (-8.0/27.0) 
+						+ K2 * (2.0) 
+						+ K3 * (-3544.0/2565.0)
+						+ K4 * (1859.0/4104.0)
+						+ K5 * (-11.0/40.0);
+				K6 = vGC ( 0.5 * dt, 
+								w_, particles[p].mu, particles[p].vPar, eqdsk, err ) * dt;
+
+				//particles[p].status += euler ( rkp1, rkp2, dt / 2.0);
+				//particles[p].status += vGC ( rkp2, eqdsk );
+
+				//particles[p].status += euler ( rkp2, rkp3, dt / 2.0);
+				//particles[p].status += vGC ( rkp3, eqdsk );
+
+				//particles[p].status += euler ( rkp3, rkp4, dt);
+				//particles[p].status += vGC ( rkp4, eqdsk );
+
+				//particles[p].status += average_vGC ( rkp1, rkp2, rkp3, rkp4, rkpf, dt );
+
+				//rkp1 = rkpf;
+
+				if(particles[p].status) {
+					cout << "\twall" << endl;
+					break;
+				}
+			}
 		}
 	}
 
