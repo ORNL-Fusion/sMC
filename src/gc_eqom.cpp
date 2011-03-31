@@ -43,7 +43,7 @@ int euler ( const C_rkGCparticle &p1, C_rkGCparticle &p2, const REAL dt ) {
 }
 
 // Calculate vGC given position, mu and vPar.
-CK& vGC ( REAL dt, CK &p0, REAL mu, REAL vPar0, Ceqdsk &eqdsk, int err ) {
+Crk vGC ( const REAL dt, const Crk &p0, const REAL mu, const REAL vPar0, Ceqdsk &eqdsk, int err ) {
 
 	// get background data(s) at particle location
 	
@@ -81,7 +81,7 @@ CK& vGC ( REAL dt, CK &p0, REAL mu, REAL vPar0, Ceqdsk &eqdsk, int err ) {
 	REAL vPar = vPar0 + dvPar_dt * dt;
 
 	// vGC
-	CK vGC;
+	Crk vGC;
 	vGC.r = vPar * unitb_r + pow(vPer,2) * bGrad_r + pow(vPar,2) * bCurv_r;
 	vGC.p = vPar * unitb_p + pow(vPer,2) * bGrad_p + pow(vPar,2) * bCurv_p;
 	vGC.z = vPar * unitb_z + pow(vPer,2) * bGrad_z + pow(vPar,2) * bCurv_z;

@@ -5,7 +5,7 @@
 #include "eqdsk.hpp"
 #include "constants.hpp"
 
-CK& vGC ( REAL dt, CK &p0, REAL mu, REAL vPar0, Ceqdsk &eqdsk, int err );
+Crk vGC ( const REAL dt, const Crk &p0, const REAL mu, const REAL vPar0, Ceqdsk &eqdsk, int err );
 //int vGC ( C_rkGCparticle &p, Ceqdsk &eqdsk);
 int euler ( const C_rkGCparticle &p1, C_rkGCparticle &p2, const REAL dt );
 int average_vGC 

@@ -35,26 +35,18 @@ class C_rkGCparticle {
 		}
 };
 
-class CK {
+class Crk {
 
 	public:
 		REAL r, p, z;
 
-	CK operator*(const REAL &f){
-		CK K;
-		K.r = f * this->r;
-		K.p = f * this->p;
-		K.z = f * this->z;
-		return K;
-	}
+    Crk& operator+=(const Crk &K);
 
-	CK operator+(const CK Kin){
-		CK Kout;
-		Kout.r = Kin.r + r;
-		Kout.p = Kin.p + p;
-		Kout.z = Kin.z + z;
-		return Kout;
-	}
+    friend Crk operator+(const Crk &K1, const Crk &K2);
+    friend Crk operator*(const REAL &f, const Crk &K);
+    friend Crk operator*(const Crk &K, const REAL &f);
+    friend Crk operator/(const REAL &f, const Crk &K);
+    friend Crk operator/(const Crk &K, const REAL &f);
 };
 
 #endif
