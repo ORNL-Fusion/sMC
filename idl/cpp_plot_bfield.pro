@@ -1,5 +1,7 @@
 pro Cpp_plot_bfield
 
+	eqdsk = readgeqdsk ( 'data/eqdsk' )	
+
 	cdfId = ncdf_open('output/bField.nc')
 
 		ncdf_varget, cdfId, 'r', r
@@ -26,4 +28,8 @@ pro Cpp_plot_bfield
 	!p.charSize = 1
 	!p.multi =0
 
+	p = plot ( br[*,65] )
+	p = plot ( eqdsk.br[*,65], /over, thick = 2 )
+
+stop
 end

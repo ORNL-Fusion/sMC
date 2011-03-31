@@ -37,16 +37,32 @@ class C_rkGCparticle {
 
 class Crk {
 
+	private:
+
 	public:
-		REAL r, p, z;
+		REAL r, p, z, vPar;
+		
+		// Default constructor
+		Crk () {r=0.0;p=0.0;z=0.0;vPar=0.0;}; 
 
-    Crk& operator+=(const Crk &K);
+		// Copy constructor
+		Crk ( const Crk &K ) {*this = K;}	
 
-    friend Crk operator+(const Crk &K1, const Crk &K2);
-    friend Crk operator*(const REAL &f, const Crk &K);
-    friend Crk operator*(const Crk &K, const REAL &f);
-    friend Crk operator/(const REAL &f, const Crk &K);
-    friend Crk operator/(const Crk &K, const REAL &f);
+    	Crk& operator+=(const Crk &K);
+	   	Crk& operator-=(const Crk &K);
+		Crk& operator=(const Crk &K);
+
+    	friend Crk operator+(const Crk &K1, const Crk &K2);
+    	friend Crk operator-(const Crk &K1, const Crk &K2);
+    	friend Crk operator*(const REAL &f, const Crk &K);
+    	friend Crk operator*(const Crk &K, const REAL &f);
+    	friend Crk operator/(const REAL &f, const Crk &K);
+    	friend Crk operator/(const Crk &K, const REAL &f);
+
+		friend Crk Kabs(const Crk &K);
+		friend REAL Kmax(const Crk &K);
+		
+		void print();
 };
 
 #endif

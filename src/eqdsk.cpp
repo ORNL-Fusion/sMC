@@ -15,8 +15,8 @@ using namespace constants;
 int Ceqdsk::get_index 
 	( const REAL rIn, const REAL zIn, Ceqdsk::interpIndex &index ) {
 
-	index.i = (rIn - r.front()) / ( r.back() - r.front() ) * r.size();
-	index.j = (zIn - z.front()) / ( z.back() - z.front() ) * z.size();
+	index.i = (rIn - r.front()) / ( r.back() - r.front() ) * (r.size()-1.0);
+	index.j = (zIn - z.front()) / ( z.back() - z.front() ) * (z.size()-1.0);
 
 	index.i1 = floor(index.i);
 	index.i2 = ceil(index.i);
@@ -321,7 +321,6 @@ int Ceqdsk::bForceTerms () {
 			br_B[i][j] = br[i][j] / bmag[i][j];
 			bp_B[i][j] = bp[i][j] / bmag[i][j];
 			bz_B[i][j] = bz[i][j] / bmag[i][j];
-
 		}
 	}
 
