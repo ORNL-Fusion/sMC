@@ -50,7 +50,7 @@ class Ceqdsk {
         // functions 
 		int read_file ( std::string );
 		int write_ncfile ( std::string );
-		int bForceTerms ();
+		int bForceTerms ( const int _Z, const int amu);
 		int get_index 
 			( const REAL r, const REAL z, interpIndex &index );
 		REAL bilinear_interp 

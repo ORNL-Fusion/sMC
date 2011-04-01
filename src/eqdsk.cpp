@@ -15,8 +15,8 @@ using namespace constants;
 int Ceqdsk::get_index 
 	( const REAL rIn, const REAL zIn, Ceqdsk::interpIndex &index ) {
 
-	index.i = (rIn - r.front()) / ( r.back() - r.front() ) * (r.size()-1.0);
-	index.j = (zIn - z.front()) / ( z.back() - z.front() ) * (z.size()-1.0);
+	index.j = (rIn - r.front()) / ( r.back() - r.front() ) * (r.size()-1.0);
+	index.i = (zIn - z.front()) / ( z.back() - z.front() ) * (z.size()-1.0);
 
 	index.i1 = floor(index.i);
 	index.i2 = ceil(index.i);
@@ -304,11 +304,10 @@ int Ceqdsk::write_ncfile ( const string fName ) {
 }
 
 
-int Ceqdsk::bForceTerms () {
+int Ceqdsk::bForceTerms ( const int _Z, const int amu ) {
 
 	cout << "Calculating the B force terms ..." << endl;
 
-	int Z = 1;
 	arr2D_ wc(boost::extents[nRow_][nCol_]);
 	arr2D_ br_B(boost::extents[nRow_][nCol_]);
 	arr2D_ bp_B(boost::extents[nRow_][nCol_]);
@@ -317,7 +316,7 @@ int Ceqdsk::bForceTerms () {
 	for(int j=0;j<nCol_;j++){
 		for(int i=0;i<nRow_;i++){
 
-			wc[i][j] = Z * _e * bmag[i][j] / _mi;
+			wc[i][j] = _Z * _e * bmag[i][j] / (amu * _mi);
 			br_B[i][j] = br[i][j] / bmag[i][j];
 			bp_B[i][j] = bp[i][j] / bmag[i][j];
 			bz_B[i][j] = bz[i][j] / bmag[i][j];

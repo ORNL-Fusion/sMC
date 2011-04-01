@@ -15,15 +15,17 @@ int main ()
 
 	cout << "sMC ... c++ & CUDA version :)" << endl;
 
+    int _Z = 1;
+    int amu = 1;
 
-	string fName = "data/g129x129_1051206002.01120.cmod";
+	string fName = "data/eqdsk";
 	//string fName = "data/g122080.03100";
 
 	Ceqdsk eqdsk;	
 	int stat;
 	stat = eqdsk.read_file ( fName );
 	stat = eqdsk.write_ncfile ( "output/bField.nc" );
-	stat = eqdsk.bForceTerms ();
+	stat = eqdsk.bForceTerms ( _Z, amu );
 
 	vector<C_GCparticle> particles;	
 
@@ -36,7 +38,7 @@ int main ()
 	for(unsigned int p=0;p<particles.size();p++){
 		stat = eqdsk.get_index(particles[p].r,particles[p].z,index);
 		bmag_p = eqdsk.bilinear_interp ( index, eqdsk.bmag );
-		particles[p].mu = _mi * (particles[p].vPer,2) / ( 2.0 * bmag_p );
+		particles[p].mu = ( amu * _mi ) * (particles[p].vPer,2) / ( 2.0 * bmag_p );
 	}	
 
 
@@ -50,13 +52,13 @@ int main ()
 	REAL dt = 1e-8;
 	REAL dtMax = 1e-6;
 	REAL dtMin = 1e-10;
-	REAL TOL = 1e-2;
+	REAL TOL = 1e-4;
 	unsigned int FLAG;
 
 	Crk K1, K2, K3, K4, K5, K6, w, R;
 	REAL dvPar1=0, dvPar2=0, dvPar3=0, dvPar4=0, dvPar5=0, dvPar6=0;
 
-	for(int p=0;p<1;p++) {
+	for(int p=0;p<100;p++) {
 
 		if(!particles[p].status) {
 
@@ -74,51 +76,45 @@ int main ()
 			vector<REAL> zOut(1,particles[p].z);	
 
 			FLAG = 1;
+            ii = 0;
+            err = 0;
+            t = 0.0;
 
-			//for(int t=0;t<1;t++) {
-			while(FLAG==1 && ii < 10) {
+			while(FLAG==1 && ii < 10000) {
 
 				cout << endl;
 				cout << "\tStep: " << ii << endl;
 				cout << "\tdt: " << dt << endl;
 				cout << "\tt: " << t << endl;
 				cout << "\tmu_mi: " << particles[p].mu / _mi << endl;
+                cout << "\terr: " << err << endl;
 
 				w.print();
+
 				// Given a position, mu and vPar calculate vGC
 				K1 = dt * vGC ( 0.0, 
 						w, 
 						particles[p].mu, eqdsk, err );
-				K1.print();
-				//cout << K1.r/dt << endl;
-				//cout << K1.p/dt << endl;
-				//cout << K1.z/dt << endl;
-
 
 				K2 = dt * vGC ( 1.0/4.0 * dt, 
 						w + K1 * 1.0/4.0, 
                         particles[p].mu, eqdsk, err );
-				K2.print();
 
 				K3 = dt * vGC ( 3.0/8.0 * dt, 
 				        w + K1 * 3.0/32.0 + K2 * 9.0/32.0,
                         particles[p].mu, eqdsk, err );
-				K3.print();
 
 				K4 = dt * vGC ( 12.0/13.0 * dt, 
 				        w + K1 * 1932.0/2197.0 + K2 * (-7200.0/2197.0) + K3 * 7296.0/2197.0,
 						particles[p].mu, eqdsk, err );
-				K4.print();
 
 				K5 = dt * vGC ( dt, 
 				        w + K1 * 439.0/216.0 + K2 * (-8.0) + K3 * 3680.0/513.0 + K4 * (-845.0/4104.0),
 						particles[p].mu, eqdsk, err );
-				K5.print();
 
 				K6 = dt * vGC ( 0.5 * dt, 
 				        w + K1 * (-8.0/27.0) + K2 * 2.0 + K3 * (-3544.0/2565.0) + K4 * 1859.0/4104.0 + K5 * (-11.0/40.0),
 						particles[p].mu, eqdsk, err );
-				K6.print();
 
 				R = Kabs ( 1.0/360.0*K1 - 128.0/4275.0*K3 - 2197.0/75240.0*K4 + 1.0/50.0*K5 + 2.0/55.0*K6 ) / dt;
 
@@ -127,14 +123,11 @@ int main ()
 				REAL delta = 0.84 * pow ( TOL / R_, 1.0/4.0 );
 
 				cout << "\tdelta: " << delta << endl;
-				//cout << "\tR: " << R.r<<" "<<R.p<<" "<<R.z << endl;
-				//cout << "\tR_: " << R_ << endl;
 
 				if(R_<=TOL) {
 						// Approximation accepted
 						t += dt;
 						w += 25.0/216.0*K1 + 1408.0/2565.0*K3 + 2197.0/4104.0*K4 - 1.0/5.0*K5;
-						//particles[p].vPar += 25.0/216.0*dvPar1 + 1408.0/2565.0*dvPar3 + 2197.0/4104.0*dvPar4 - 1.0/5.0*dvPar5;
 				}
 
 				// Adjust time step
@@ -155,7 +148,7 @@ int main ()
 				}
 
 				// End of desired time
-				if(t>runTime || err) {
+				if(t>=runTime || err) {
 					FLAG = 0;
 				}
 				else if(t+dt>runTime) {

@@ -33,7 +33,6 @@ int read_pl ( const string fName, vector<C_GCparticle> &particles )  {
 	nc_weight = dataFile.get_var("weight");
 	nc_status = dataFile.get_var("status");
 
-
 	float *tmp_r = new float[nP];
 	float *tmp_z = new float[nP];
 	float *tmp_vPer = new float[nP];
