@@ -50,7 +50,7 @@ Crk vGC ( const REAL dt, const Crk &p0, const REAL mu, Ceqdsk &eqdsk, int &err )
 	// get background data(s) at particle location
 	
 	Ceqdsk::interpIndex index;
-	err = eqdsk.get_index ( p0.r, p0.z, index );
+	err += eqdsk.get_index ( p0.r, p0.z, index );
 	if(err) {
 
 	    cout << "\t" << __FILE__  << "\tREAL i: "<<index.i << endl;

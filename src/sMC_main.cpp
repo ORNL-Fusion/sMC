@@ -6,6 +6,7 @@
 #include "constants.hpp"
 #include <vector>
 #include <netcdfcpp.h>
+#include <sstream>
 
 using namespace std;
 using namespace constants;
@@ -50,7 +51,7 @@ int main ()
 	REAL t = 0.0;
 	REAL runTime = 1e-4;
 	REAL dt = 1e-8;
-	REAL dtMax = 1e-6;
+	REAL dtMax = 1e-4;
 	REAL dtMin = 1e-10;
 	REAL TOL = 1e-4;
 	unsigned int FLAG;
@@ -80,16 +81,16 @@ int main ()
             err = 0;
             t = 0.0;
 
-			while(FLAG==1 && ii < 10000) {
+			while(FLAG==1 && ii < 30000) {
 
-				cout << endl;
-				cout << "\tStep: " << ii << endl;
-				cout << "\tdt: " << dt << endl;
-				cout << "\tt: " << t << endl;
-				cout << "\tmu_mi: " << particles[p].mu / _mi << endl;
-                cout << "\terr: " << err << endl;
+				//cout << endl;
+				//cout << "\tStep: " << ii << endl;
+				//cout << "\tdt: " << dt << endl;
+				//cout << "\tt: " << t << endl;
+				//cout << "\tmu_mi: " << particles[p].mu / _mi << endl;
+                //cout << "\terr: " << err << endl;
 
-				w.print();
+				//w.print();
 
 				// Given a position, mu and vPar calculate vGC
 				K1 = dt * vGC ( 0.0, 
@@ -116,13 +117,18 @@ int main ()
 				        w + K1 * (-8.0/27.0) + K2 * 2.0 + K3 * (-3544.0/2565.0) + K4 * 1859.0/4104.0 + K5 * (-11.0/40.0),
 						particles[p].mu, eqdsk, err );
 
+				if(err) {
+					particles[p].status = err;
+					break;
+				}
+
 				R = Kabs ( 1.0/360.0*K1 - 128.0/4275.0*K3 - 2197.0/75240.0*K4 + 1.0/50.0*K5 + 2.0/55.0*K6 ) / dt;
 
 				REAL R_ = Kmax ( R );
 
 				REAL delta = 0.84 * pow ( TOL / R_, 1.0/4.0 );
 
-				cout << "\tdelta: " << delta << endl;
+				//cout << "\tdelta: " << delta << endl;
 
 				if(R_<=TOL) {
 						// Approximation accepted
@@ -148,7 +154,7 @@ int main ()
 				}
 
 				// End of desired time
-				if(t>=runTime || err) {
+				if(t>=runTime) {
 					FLAG = 0;
 				}
 				else if(t+dt>runTime) {
@@ -161,11 +167,6 @@ int main ()
 					FLAG = 0;
 				}
 
-				//if(particles[p].status) {
-				//	cout << "\twall" << endl;
-				//	break;
-				//}
-			
 				ii++;
 
 				rOut.push_back(w.r);
@@ -174,8 +175,17 @@ int main ()
 
 			} // end while(FLAG=1)
 
-			string orb_fName = "output/orbit.nc";
-			NcFile dataFile ( &orb_fName[0], NcFile::Replace );
+			particles[p].r = w.r; 
+			particles[p].p = w.p; 
+			particles[p].z = w.z; 
+			particles[p].vPar = w.vPar;
+
+			cout << "\t p: " << p << "\t nSteps: " << ii << endl;
+
+			stringstream orb_fName;
+			orb_fName << setfill('0');
+		   	orb_fName << "output/" << setw(4) << p << "orbit.nc";
+			NcFile dataFile ( &orb_fName.str()[0], NcFile::Replace );
 			if (!dataFile.is_valid()) {
 				cout << "ERROR: Could not open nc file for writing." << endl;
 				return 1;
@@ -183,14 +193,18 @@ int main ()
 
 			unsigned int nSteps = rOut.size();
 			NcDim *nDim = dataFile.add_dim("n",nSteps);
+			NcDim *sDim = dataFile.add_dim("s",1);
 
 			NcVar *nc_rOrb = dataFile.add_var ("rOrb", ncFloat, nDim );
 			NcVar *nc_pOrb = dataFile.add_var ("pOrb", ncFloat, nDim );
 			NcVar *nc_zOrb = dataFile.add_var ("zOrb", ncFloat, nDim );
 
+			NcVar *nc_stat = dataFile.add_var ("stat", ncInt, sDim );
+
 			nc_rOrb->put(&rOut[0],nSteps);
 			nc_pOrb->put(&pOut[0],nSteps);
 			nc_zOrb->put(&zOut[0],nSteps);
+			nc_stat->put(&particles[p].status,1);
 
 		} // end if(!particle[p].status)
 	} // end for(p)
