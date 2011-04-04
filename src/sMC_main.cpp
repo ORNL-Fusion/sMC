@@ -7,6 +7,9 @@
 #include <vector>
 #include <netcdfcpp.h>
 #include <sstream>
+#include <ctime>
+
+//#define __SAVE_ORBITS__
 
 using namespace std;
 using namespace constants;
@@ -18,6 +21,7 @@ int main ()
 
     int _Z = 1;
     int amu = 1;
+	unsigned int nR = 64, nZ = 128;
 
 	string fName = "data/eqdsk";
 	//string fName = "data/g122080.03100";
@@ -25,6 +29,7 @@ int main ()
 	Ceqdsk eqdsk;	
 	int stat;
 	stat = eqdsk.read_file ( fName );
+	stat = eqdsk.calc_b ( nZ, nR );
 	stat = eqdsk.write_ncfile ( "output/bField.nc" );
 	stat = eqdsk.bForceTerms ( _Z, amu );
 
@@ -39,7 +44,9 @@ int main ()
 	for(unsigned int p=0;p<particles.size();p++){
 		stat = eqdsk.get_index(particles[p].r,particles[p].z,index);
 		bmag_p = eqdsk.bilinear_interp ( index, eqdsk.bmag );
-		particles[p].mu = ( amu * _mi ) * (particles[p].vPer,2) / ( 2.0 * bmag_p );
+		particles[p].mu = ( amu * _mi ) * pow(particles[p].vPer,2) / ( 2.0 * bmag_p );
+		particles[p].energy_eV = 0.5 * ( amu * _mi ) * 
+				( pow(particles[p].vPer,2) + pow(particles[p].vPar,2) ) / _e;
 	}	
 
 
@@ -49,21 +56,25 @@ int main ()
 	unsigned int ii = 0;	
 	int err = 0;
 	REAL t = 0.0;
-	REAL runTime = 1e-4;
-	REAL dt = 1e-8;
+	REAL runTime = 1e-3;
+	REAL dt;
 	REAL dtMax = 1e-4;
-	REAL dtMin = 1e-10;
-	REAL TOL = 1e-4;
+	REAL dtMin = 1e-9;
+	REAL EPS = 1e-3;
 	unsigned int FLAG;
 
-	Crk K1, K2, K3, K4, K5, K6, w, R;
-	REAL dvPar1=0, dvPar2=0, dvPar3=0, dvPar4=0, dvPar5=0, dvPar6=0;
+
+	time_t startTime, endTime;
+	startTime = time ( NULL );
 
 	for(int p=0;p<100;p++) {
 
 		if(!particles[p].status) {
 
 			cout << "Particle No. " << p << endl;
+			cout << "eV: " << particles[p].energy_eV << endl;
+
+			Crk K1, K2, K3, K4, K5, K6, w, R;
 
 			// Initial position w
 
@@ -72,35 +83,30 @@ int main ()
 			w.z = particles[p].z;
 			w.vPar = particles[p].vPar;
 
+#ifdef __SAVE_ORBITS__
 			vector<REAL> rOut(1,particles[p].r);	
 			vector<REAL> pOut(1,particles[p].p);	
 			vector<REAL> zOut(1,particles[p].z);	
+#endif
 
+			// Reset counters for new paricle 
 			FLAG = 1;
             ii = 0;
             err = 0;
             t = 0.0;
+			dt = dtMin;
 
-			while(FLAG==1 && ii < 30000) {
-
-				//cout << endl;
-				//cout << "\tStep: " << ii << endl;
-				//cout << "\tdt: " << dt << endl;
-				//cout << "\tt: " << t << endl;
-				//cout << "\tmu_mi: " << particles[p].mu / _mi << endl;
-                //cout << "\terr: " << err << endl;
-
-				//w.print();
+			while(FLAG==1) {
 
 				// Given a position, mu and vPar calculate vGC
 				K1 = dt * vGC ( 0.0, 
 						w, 
 						particles[p].mu, eqdsk, err );
-
+				
 				K2 = dt * vGC ( 1.0/4.0 * dt, 
 						w + K1 * 1.0/4.0, 
                         particles[p].mu, eqdsk, err );
-
+				
 				K3 = dt * vGC ( 3.0/8.0 * dt, 
 				        w + K1 * 3.0/32.0 + K2 * 9.0/32.0,
                         particles[p].mu, eqdsk, err );
@@ -126,9 +132,9 @@ int main ()
 
 				REAL R_ = Kmax ( R );
 
-				REAL delta = 0.84 * pow ( TOL / R_, 1.0/4.0 );
-
-				//cout << "\tdelta: " << delta << endl;
+				// Error control is scaled with energy
+				REAL TOL = EPS * particles[p].energy_eV;
+				REAL delta = 0.84 * pow ( TOL / R_, 0.25 );
 
 				if(R_<=TOL) {
 						// Approximation accepted
@@ -150,12 +156,14 @@ int main ()
 				// Catch max dt
 				if(dt>dtMax) {
 					cout << "\tdtMax reached: " << dt <<" "<< dtMax << endl;
-					dt = dtMax;
+				dt = dtMax;
 				}
 
 				// End of desired time
 				if(t>=runTime) {
 					FLAG = 0;
+
+					cout << "\teV: "<<particles[p].energy_eV<<endl;
 				}
 				else if(t+dt>runTime) {
 					// Make sure integration ends == runTime
@@ -163,16 +171,22 @@ int main ()
 				}
 				else if(dt<dtMin) {
 					cout << "\tdtMin reached: " << dt <<" "<< dtMin << endl;
+					cout << "\tdelta: "<<delta<<endl;
+					cout << "\tR_: "<<R_<<endl;
+					cout << "\tTOL: "<<TOL<<endl;
+					cout << "\tvPer: "<<particles[p].vPer<<endl;
+					cout << "\teV: "<<particles[p].energy_eV<<endl;
 					dt = dtMin;
 					FLAG = 0;
 				}
 
 				ii++;
 
+#ifdef __SAVE_ORBITS__
 				rOut.push_back(w.r);
 				pOut.push_back(w.p);
 				zOut.push_back(w.z);
-
+#endif
 			} // end while(FLAG=1)
 
 			particles[p].r = w.r; 
@@ -180,8 +194,9 @@ int main ()
 			particles[p].z = w.z; 
 			particles[p].vPar = w.vPar;
 
-			cout << "\t p: " << p << "\t nSteps: " << ii << endl;
+			cout << "\t nSteps: " << ii << endl;
 
+#ifdef __SAVE_ORBITS__
 			stringstream orb_fName;
 			orb_fName << setfill('0');
 		   	orb_fName << "output/" << setw(4) << p << "orbit.nc";
@@ -199,17 +214,22 @@ int main ()
 			NcVar *nc_pOrb = dataFile.add_var ("pOrb", ncFloat, nDim );
 			NcVar *nc_zOrb = dataFile.add_var ("zOrb", ncFloat, nDim );
 
+			NcVar *nc_vPar = dataFile.add_var ("vPar", ncFloat, sDim );
+
 			NcVar *nc_stat = dataFile.add_var ("stat", ncInt, sDim );
 
 			nc_rOrb->put(&rOut[0],nSteps);
 			nc_pOrb->put(&pOut[0],nSteps);
 			nc_zOrb->put(&zOut[0],nSteps);
 			nc_stat->put(&particles[p].status,1);
-
+			nc_vPar->put(&particles[p].vPar,1);
+#endif
 		} // end if(!particle[p].status)
 	} // end for(p)
 
+	endTime = time ( NULL );
 
+	cout << "Run took: " << difftime ( endTime, startTime ) << endl;
 	cout << "End of program :)" << endl;
 
 	return 0;

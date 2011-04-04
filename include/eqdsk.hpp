@@ -17,12 +17,17 @@ class Ceqdsk {
 	private:
 
 		REAL xdum;
+	    int nCol_, nRow_;
+		arr2D_ psizr_;
+		arr1D_ r_, z_, fpol_,fluxGrid_;
+		REAL dr_, dz_;
 
 	public:
 
-	    int nCol_, nRow_;
-
         // variables
+
+		int nRow, nCol;
+
 		char *header;
 		int idum,  nbbbs, limitr;
 		REAL rdim,zdim,rcentr,rleft,zmid;
@@ -30,8 +35,8 @@ class Ceqdsk {
         REAL current;
 
 		arr2D_ psizr, br, bz, bp, bmag, fpolzr;
-		arr1D_ fpol, pres, ffprim, pprime,
-			r, z, fluxGrid, qpsi, rbbbs, zbbbs, rlim, zlim;
+		arr1D_ pres, ffprim, pprime,
+			r, z, qpsi, rbbbs, zbbbs, rlim, zlim;
 
         REAL dr, dz;
         bool ascending_flux;
@@ -47,6 +52,12 @@ class Ceqdsk {
 				int i1, i2, j1, j2;
 		};
 
+		// Default constructor
+		Ceqdsk () {nCol_=0;nRow_=0;nbbbs=0;limitr=0;dr=0.0;dz=0.0;}; 
+
+		// Copy constructor
+		Ceqdsk ( const Ceqdsk &eqdsk ) {*this = eqdsk;}	
+
         // functions 
 		int read_file ( std::string );
 		int write_ncfile ( std::string );
@@ -55,6 +66,7 @@ class Ceqdsk {
 			( const REAL r, const REAL z, interpIndex &index );
 		REAL bilinear_interp 
     		( const interpIndex &index , const eqdsk::arr2D_ &data );
+		int calc_b ( const unsigned int nrow, const unsigned int ncol );
 };
 
 #endif

@@ -55,6 +55,9 @@ Crk vGC ( const REAL dt, const Crk &p0, const REAL mu, Ceqdsk &eqdsk, int &err )
 
 	    cout << "\t" << __FILE__  << "\tREAL i: "<<index.i << endl;
 	    cout << "\t" << __FILE__  << "\tREAL j: "<<index.j << endl;
+	    cout << "\t" << __FILE__  << "\tREAL r: "<< p0.r << endl;
+	    cout << "\t" << __FILE__  << "\tREAL z: "<< p0.z << endl;
+
         return vGC;
     }
 

@@ -15,21 +15,20 @@ pro Cpp_plot_bfield
 
 	nCdf_close,	cdfId 
 
-
-	window, 0, xSize = 900, ySize = 900
-	!p.multi = [0,3,2]
 	!p.charSize = 2
-		fsc_contour, psizr, r, z, title = 'psizr', /iso
-		fsc_contour, fpolzr, r, z, title = 'fpolzr', /iso
-		fsc_contour, bmag, r, z, title = 'bmag', /iso
-		fsc_contour, br, r, z, title = 'br', /iso
-		fsc_contour, bp, r, z, title = 'bp', /iso
-		fsc_contour, bz, r, z, title = 'bz', /iso
-	!p.charSize = 1
-	!p.multi =0
+	c = contour( psizr, r, z, title = 'psizr', aspect = 1.0, layout = [3,2,1] )
+	c = contour( bmag, r, z, title = 'bmag', aspect = 1.0, layout = [3,2,2], /current )
+	c = contour( br, r, z, title = 'br', aspect = 1.0, layout = [3,2,3], /current )
+	c = contour( bp, r, z, title = 'bp', aspect = 1.0, layout = [3,2,4], /current )
+	c = contour( bz, r, z, title = 'bz', aspect = 1.0, layout = [3,2,5], /current )
 
-	p = plot ( br[*,65] )
-	p = plot ( eqdsk.br[*,65], /over, thick = 2 )
+	c = contour( eqdsk.psizr, 	eqdsk.r, eqdsk.z, title = 'psizr', aspect = 1.0, layout = [3,2,1] )
+	c = contour( eqdsk.bmag, 	eqdsk.r, eqdsk.z, title = 'bmag', aspect = 1.0, layout = [3,2,2], /current )
+	c = contour( eqdsk.br, 		eqdsk.r, eqdsk.z, title = 'br', aspect = 1.0, layout = [3,2,3], /current )
+	c = contour( eqdsk.bphi,	eqdsk.r, eqdsk.z, title = 'bp', aspect = 1.0, layout = [3,2,4], /current )
+	c = contour( eqdsk.bz, 		eqdsk.r, eqdsk.z, title = 'bz', aspect = 1.0, layout = [3,2,5], /current )
+	
+	!p.charSize = 1
 
 stop
 end

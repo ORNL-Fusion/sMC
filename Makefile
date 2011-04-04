@@ -36,8 +36,8 @@ INC += -I${NETCDFDIR}/include
 INC += -I${BOOSTDIR}
 
 CXX = ${GCCDIR}/bin/g++
-CXXFLAGS = -Wall -g
-LDFLAGS =
+CXXFLAGS = -Wall -g -pg
+LDFLAGS = -pg
 
 ${EXEC}: ${OBJECTS}
 	${CXX} ${LDFLAGS} ${OBJECTS} ${LIBS} -o $@

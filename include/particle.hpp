@@ -8,7 +8,7 @@
 class C_GCparticle {
 
 	public:
-		REAL r, p, z, vPer, vPar, weight, mu;
+		REAL r, p, z, vPer, vPar, weight, mu, energy_eV;
 		int status;
 };
 
