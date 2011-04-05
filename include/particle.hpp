@@ -5,7 +5,7 @@
 #include "constants.hpp"
 #include <iomanip>
 
-class C_GCparticle {
+class Cgc_particle {
 
 	public:
 		REAL r, p, z, vPer, vPar, weight, mu, energy_eV;

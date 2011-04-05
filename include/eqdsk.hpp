@@ -49,11 +49,11 @@ class Ceqdsk {
 
 			public: 
 				REAL i, j;
-				int i1, i2, j1, j2;
+				unsigned int i1, i2, j1, j2;
 		};
 
 		// Default constructor
-		Ceqdsk () {nCol_=0;nRow_=0;nbbbs=0;limitr=0;dr=0.0;dz=0.0;}; 
+		Ceqdsk () {}; 
 
 		// Copy constructor
 		Ceqdsk ( const Ceqdsk &eqdsk ) {*this = eqdsk;}	
@@ -63,9 +63,9 @@ class Ceqdsk {
 		int write_ncfile ( std::string );
 		int bForceTerms ( const int _Z, const int amu);
 		int get_index 
-			( const REAL r, const REAL z, interpIndex &index );
+			( const REAL r, const REAL z, interpIndex &index ) const;
 		REAL bilinear_interp 
-    		( const interpIndex &index , const eqdsk::arr2D_ &data );
+    		( const interpIndex &index , const eqdsk::arr2D_ &data ) const;
 		int calc_b ( const unsigned int nrow, const unsigned int ncol );
 };
 

@@ -4,6 +4,6 @@
 #include "particle.hpp"
 #include <vector>
 
-int read_pl ( const std::string fName, std::vector<C_GCparticle> &particles );
+int read_pl ( const std::string fName, std::vector<Cgc_particle> &particles );
 
 #endif

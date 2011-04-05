@@ -5,7 +5,7 @@
 
 using namespace std;
 
-int read_pl ( const string fName, vector<C_GCparticle> &particles )  {
+int read_pl ( const string fName, vector<Cgc_particle> &particles )  {
 
 	cout << "Reading particle list file " << fName << endl;
 

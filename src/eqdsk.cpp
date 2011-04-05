@@ -15,7 +15,7 @@ using namespace constants;
 #define __DIM2D__ boost::extents[nRow][nCol]
 
 int Ceqdsk::get_index 
-	( const REAL rIn, const REAL zIn, Ceqdsk::interpIndex &index ) {
+	( const REAL rIn, const REAL zIn, Ceqdsk::interpIndex &index ) const {
 
 	index.j = (rIn - r.front()) / ( r.back() - r.front() ) * (r.size()-1.0);
 	index.i = (zIn - z.front()) / ( z.back() - z.front() ) * (z.size()-1.0);
@@ -37,7 +37,7 @@ int Ceqdsk::get_index
 // bi-linear interpolation
 // see wikipedia ;)
 REAL Ceqdsk::bilinear_interp 
-    ( const Ceqdsk::interpIndex &index , const eqdsk::arr2D_ &data ) {
+    ( const Ceqdsk::interpIndex &index , const eqdsk::arr2D_ &data ) const {
 
 	REAL f11 = data[index.i1][index.j1];
 	REAL f21 = data[index.i2][index.j1];
@@ -335,7 +335,7 @@ int Ceqdsk::write_ncfile ( const string fName ) {
 	NcDim *zDim = dataFile.add_dim("nz",nRow);
 
 	NcDim *rDim_ = dataFile.add_dim("nr_",nCol_);
-	NcDim *zDim_ = dataFile.add_dim("nz_",nRow_);
+	//NcDim *zDim_ = dataFile.add_dim("nz_",nRow_);
 
 	NcVar *nc_r = dataFile.add_var ("r", ncFloat, rDim );
 	NcVar *nc_z = dataFile.add_var ("z", ncFloat, zDim );

@@ -8,6 +8,7 @@
 #include <netcdfcpp.h>
 #include <sstream>
 #include <ctime>
+#include "sMC_cuda.h"
 
 //#define __SAVE_ORBITS__
 
@@ -33,7 +34,7 @@ int main ()
 	stat = eqdsk.write_ncfile ( "output/bField.nc" );
 	stat = eqdsk.bForceTerms ( _Z, amu );
 
-	vector<C_GCparticle> particles;	
+	vector<Cgc_particle> particles;	
 
 	string plName = "data/pList.dav.nc.000";
 	stat = read_pl ( plName, particles );
@@ -67,7 +68,7 @@ int main ()
 	time_t startTime, endTime;
 	startTime = time ( NULL );
 
-	for(int p=0;p<100;p++) {
+	for(int p=0;p<10;p++) {
 
 		if(!particles[p].status) {
 
@@ -230,6 +231,11 @@ int main ()
 	endTime = time ( NULL );
 
 	cout << "Run took: " << difftime ( endTime, startTime ) << endl;
+
+    cout << "*** CUDA ***" << endl;
+
+    stat = copy_data ( particles ); 
+
 	cout << "End of program :)" << endl;
 
 	return 0;
