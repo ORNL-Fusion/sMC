@@ -20,7 +20,8 @@ GCCDIR = /home/dg6/code/gcc/gcc-4.4.5
 ALGLIBDIR = /home/dg6/code/alglib/cpp/src
 NETCDFDIR = /home/dg6/code/netcdf/netcdf_gnu64
 BOOSTDIR = /usr/include
-CUDADIR = /usr/local/cuda
+CUDADIR = /home/dg6/code/cuda/4.0/cuda
+CUDALIBDIR = ${CUDADIR}/lib64
 
 # Catch for greendl (my laptop)
 
@@ -29,6 +30,8 @@ ifeq ($(findstring greendl,$(HOSTNAME_OSX)),greendl)
 	ALGLIBDIR = /home/dg6/code/alglib/cpp/src
 	NETCDFDIR = /opt/local
 	BOOSTDIR = /opt/local/lib/boost
+	CUDADIR = /usr/local/cuda
+	CUDALIBDIR = ${CUDADIR}/lib
 endif
 
 ALGLIB = $(wildcard $(ALGLIBDIR)/*.o)
@@ -46,9 +49,9 @@ CXXFLAGS = -Wall -g -pg
 LDFLAGS = -pg
 
 NVCC = ${CUDADIR}/bin/nvcc
-NVCCFLAGS = 
+NVCCFLAGS = -g -G --compiler-bindir ${GCCDIR}/bin
 INC += -I${CUDADIR}/include
-LIBS += -L${CUDADIR}/lib -lcuda -lcudart
+LIBS += -L${CUDALIBDIR} -lcuda -lcudart
 
 ${EXEC}: ${OBJECTS} ${CUDA_OBJECTS}
 	${CXX} ${LDFLAGS} ${OBJECTS} ${CUDA_OBJECTS} ${LIBS} -o $@
@@ -58,7 +61,6 @@ ${OBJDIR}/%.o: ${SRCDIR}/%.cpp ${INCLUDES}
 
 ${OBJDIR}/%.o: ${SRCDIR}/%.cu ${CUDA_INCLUDES}
 	${NVCC} -c ${INC} ${NVCCFLAGS} $< -o $@
-
 
 .PHONY: clean
 

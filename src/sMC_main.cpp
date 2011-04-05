@@ -8,7 +8,7 @@
 #include <netcdfcpp.h>
 #include <sstream>
 #include <ctime>
-#include "sMC_cuda.h"
+#include "cuda_wrap.h"
 
 //#define __SAVE_ORBITS__
 
@@ -234,7 +234,11 @@ int main ()
 
     cout << "*** CUDA ***" << endl;
 
-    stat = copy_data ( particles ); 
+	stat = copy_particles_to_device ( particles );
+
+	REAL *d_bmag, *d_r;
+	d_bmag = copy_2D_to_device (eqdsk.bmag,eqdsk.nRow,eqdsk.nCol);
+	d_r = copy_1D_to_device (eqdsk.r,eqdsk.nCol);
 
 	cout << "End of program :)" << endl;
 
