@@ -1,7 +1,7 @@
 #ifndef CONSTANTS_HPP_
 #define CONSTANTS_HPP_
 
-#define REAL double
+#define REAL float
 
 namespace constants 
 {

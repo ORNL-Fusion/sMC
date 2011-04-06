@@ -5,12 +5,12 @@
 #include "boost/multi_array.hpp"
 #include "constants.hpp"
 
-namespace eqdsk {
-    typedef boost::multi_array<REAL,2> arr2D_;
-    typedef std::vector<REAL> arr1D_;
-}
+//namespace eqdsk {
+//    typedef boost::multi_array<REAL,2> boost::multi_array<REAL,2>;
+//    typedef std::vector<REAL> std::vector<REAL>;
+//}
 
-using namespace eqdsk;
+//using namespace eqdsk;
 
 class Ceqdsk {
 		
@@ -18,8 +18,8 @@ class Ceqdsk {
 
 		REAL xdum;
 	    int nCol_, nRow_;
-		arr2D_ psizr_;
-		arr1D_ r_, z_, fpol_,fluxGrid_;
+		boost::multi_array<REAL,2> psizr_;
+		std::vector<REAL> r_, z_, fpol_,fluxGrid_;
 		REAL dr_, dz_;
 
 	public:
@@ -34,14 +34,14 @@ class Ceqdsk {
         REAL rmaxis,zmaxis,simag,sibry,bcentr;
         REAL current;
 
-		arr2D_ psizr, br, bz, bp, bmag, fpolzr;
-		arr1D_ pres, ffprim, pprime,
+		boost::multi_array<REAL,2> psizr, br, bz, bp, bmag, fpolzr;
+		std::vector<REAL> pres, ffprim, pprime,
 			r, z, qpsi, rbbbs, zbbbs, rlim, zlim;
 
         REAL dr, dz;
         bool ascending_flux;
 
-		arr2D_ bCurvature_r, bCurvature_p, bCurvature_z,
+		boost::multi_array<REAL,2> bCurvature_r, bCurvature_p, bCurvature_z,
 			   gradB_r, gradB_z, bDotGradB, 
 			   bGradient_r, bGradient_p, bGradient_z;
 
@@ -65,7 +65,7 @@ class Ceqdsk {
 		int get_index 
 			( const REAL r, const REAL z, interpIndex &index ) const;
 		REAL bilinear_interp 
-    		( const interpIndex &index , const eqdsk::arr2D_ &data ) const;
+    		( const interpIndex &index , const boost::multi_array<REAL,2> &data ) const;
 		int calc_b ( const unsigned int nrow, const unsigned int ncol );
 };
 

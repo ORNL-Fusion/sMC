@@ -37,7 +37,7 @@ int Ceqdsk::get_index
 // bi-linear interpolation
 // see wikipedia ;)
 REAL Ceqdsk::bilinear_interp 
-    ( const Ceqdsk::interpIndex &index , const eqdsk::arr2D_ &data ) const {
+    ( const Ceqdsk::interpIndex &index , const boost::multi_array<REAL,2> &data ) const {
 
 	REAL f11 = data[index.i1][index.j1];
 	REAL f21 = data[index.i2][index.j1];
@@ -223,7 +223,8 @@ int Ceqdsk::calc_b ( const unsigned int nrow, const unsigned int ncol ) {
 	// AGLIB is double only, so copy REAL vectors to double
 	std::vector<double> r_dbl(r_.begin(),r_.end());
 	std::vector<double> z_dbl(z_.begin(),z_.end());
-	boost::multi_array<double,2> psizr_dbl = psizr_;
+	boost::multi_array<double,2> psizr_dbl(boost::extents[nRow_][nCol_]);
+	psizr_dbl = psizr_;
 
 	// Population the ALGLIB arrays
 	AG_r.setcontent(nCol_,&r_dbl[0]);
@@ -374,10 +375,10 @@ int Ceqdsk::bForceTerms ( const int _Z, const int amu ) {
 
 	cout << "Calculating the B force terms ..." << endl;
 
-	arr2D_ wc(__DIM2D__);
-	arr2D_ br_B(__DIM2D__);
-	arr2D_ bp_B(__DIM2D__);
-	arr2D_ bz_B(__DIM2D__);
+	boost::multi_array<REAL,2> wc(__DIM2D__);
+	boost::multi_array<REAL,2> br_B(__DIM2D__);
+	boost::multi_array<REAL,2> bp_B(__DIM2D__);
+	boost::multi_array<REAL,2> bz_B(__DIM2D__);
 
 	for(int j=0;j<nCol;j++){
 		for(int i=0;i<nRow;i++){
@@ -389,19 +390,19 @@ int Ceqdsk::bForceTerms ( const int _Z, const int amu ) {
 		}
 	}
 
-	arr2D_ br_B_dr(__DIM2D__);
-	arr2D_ br_B_dz(__DIM2D__);
-	arr2D_ bp_B_dr(__DIM2D__);
-	arr2D_ bp_B_dz(__DIM2D__);
-	arr2D_ bz_B_dr(__DIM2D__);
-	arr2D_ bz_B_dz(__DIM2D__);
+	boost::multi_array<REAL,2> br_B_dr(__DIM2D__);
+	boost::multi_array<REAL,2> br_B_dz(__DIM2D__);
+	boost::multi_array<REAL,2> bp_B_dr(__DIM2D__);
+	boost::multi_array<REAL,2> bp_B_dz(__DIM2D__);
+	boost::multi_array<REAL,2> bz_B_dr(__DIM2D__);
+	boost::multi_array<REAL,2> bz_B_dz(__DIM2D__);
 
 	gradB_r.resize(__DIM2D__);
 	gradB_z.resize(__DIM2D__); 
 
-	arr2D_ lnB(__DIM2D__);
-	arr2D_ lnB_dr(__DIM2D__);
-	arr2D_ lnB_dz(__DIM2D__);
+	boost::multi_array<REAL,2> lnB(__DIM2D__);
+	boost::multi_array<REAL,2> lnB_dr(__DIM2D__);
+	boost::multi_array<REAL,2> lnB_dz(__DIM2D__);
 
 	for(int j=0;j<nCol;j++) {
 		for(int i=0;i<nRow;i++)
@@ -464,9 +465,9 @@ int Ceqdsk::bForceTerms ( const int _Z, const int amu ) {
 		for(int i=0;i<nRow;i++) lnB_dz[i][j] = tmpOut[i];
 	}
 
-	arr2D_ bDotGradB_r(__DIM2D__);
-	arr2D_ bDotGradB_p(__DIM2D__);
-	arr2D_ bDotGradB_z(__DIM2D__);
+	boost::multi_array<REAL,2> bDotGradB_r(__DIM2D__);
+	boost::multi_array<REAL,2> bDotGradB_p(__DIM2D__);
+	boost::multi_array<REAL,2> bDotGradB_z(__DIM2D__);
 
 	bCurvature_r.resize(__DIM2D__);
 	bCurvature_p.resize(__DIM2D__);

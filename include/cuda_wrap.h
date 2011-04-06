@@ -4,6 +4,8 @@
 #include "particle.hpp"
 #include "constants.hpp"
 #include "eqdsk.hpp"
+#include <vector>
+#include "boost/multi_array.hpp"
 
 struct cu_ptr_pitch {
     REAL *ptr;
@@ -28,10 +30,17 @@ class cu_interpIndex {
 };
 
 
-int copy_particles_to_device (std::vector<Cgc_particle> &H_particles);
-cu_ptr_pitch copy_2D_to_device ( eqdsk::arr2D_ &data2D, const unsigned int nRow, const unsigned int nCol );
-REAL* copy_1D_to_device ( eqdsk::arr1D_ &h_data1D, const unsigned int n );
-int cu_test_cuda ( cu_ptrs &d_ptrs, int nRow, int nCol );
+int 
+copy_particles_to_device (std::vector<Cgc_particle> &H_particles);
+
+cu_ptr_pitch 
+copy_2D_to_device ( boost::multi_array<REAL,2> &data2D, const unsigned int nRow, const unsigned int nCol );
+
+REAL* 
+copy_1D_to_device ( std::vector<REAL> &h_data1D, const unsigned int n );
+
+int 
+cu_test_cuda ( const cu_ptrs &d_ptrs, const int nRow, const int nCol );
 
 #endif
 

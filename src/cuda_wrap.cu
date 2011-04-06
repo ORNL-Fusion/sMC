@@ -5,7 +5,6 @@
 #include "eqdsk.hpp"
 #include "constants.hpp"
 #include "cuda_wrap.h"
-#include <cuda.h>
 #include "cuPrintf.cu"
 
 using namespace std;
@@ -31,19 +30,26 @@ __device__ int cu_get_index
 	return 0;
 }
 */
+__global__ void testKernelA(int val) {
+	cuPrintf("Value is: %d\n", val);
+}
 
-__global__ void testKernel ( REAL *D_data2D, 
+__global__ void check2Dcpy ( REAL *data2D, 
 				size_t pitch, const unsigned int nRow, const unsigned int nCol ) {
-	int tid;
-    tid = blockIdx.x * blockDim.x + threadIdx.x;
-    cuPrintf("%d\n", tid);	
 
 	for (int r=0;r<nRow;++r) {
-			REAL *row = (REAL*)((char*)D_data2D + r*pitch);
+			REAL *row = (REAL*)((char*)data2D + r*pitch);
 			for (int c=0;c<nCol;++c) {
 					REAL element = row[c];
-                    cuPrintf("%i %i %d\n", r, c, element);
+                    cuPrintf("%i %i %f\n", r, c, element);
 			}
+	}
+}
+
+__global__ void check1Dcpy ( REAL *data1D, const unsigned int n ) {
+
+	for(int i=0;i<n;++i) {
+			cuPrintf("%i %f\n", i, data1D[i]);
 	}
 }
 
@@ -66,34 +72,38 @@ int copy_particles_to_device (vector<Cgc_particle> &H_particles) {
 	return 0;
 }
 
-cu_ptr_pitch copy_2D_to_device ( eqdsk::arr2D_ &data2D, const unsigned int nRow, const unsigned int nCol ) {
+cu_ptr_pitch copy_2D_to_device 
+( boost::multi_array<REAL,2> &data2D, const unsigned int M, const unsigned int N ) {
 
     cu_ptr_pitch out;
+	size_t size = N * sizeof(REAL);
 
-	cudaMallocPitch ( (void**)&out.ptr, &out.pitch, nCol * sizeof(REAL), nRow );
-	cudaMemcpy2D ( out.ptr, out.pitch, &data2D[0][0], nCol * sizeof(REAL), nCol, nRow, cudaMemcpyHostToDevice );
-	//testKernel<<<100,512>>>(D_data2D,pitch,nRow,nCol);
+	cudaMallocPitch ( (void**)&out.ptr, &out.pitch, size, M );
+	cudaMemcpy2D ( out.ptr, out.pitch, &data2D[0][0], 
+					size, size, M, cudaMemcpyHostToDevice );
 
 	return out;
 }
 
-REAL* copy_1D_to_device ( eqdsk::arr1D_ &h_data1D, const unsigned int n ) {
+REAL* copy_1D_to_device 
+( std::vector<REAL> &h_data1D, const unsigned int n ) {
 
 	REAL *d_data1D;
 	size_t size = n * sizeof(REAL);
-	cudaMalloc ( &d_data1D, size );
+	cudaMalloc ( (void**)&d_data1D, size );
 	cudaMemcpy ( d_data1D, &h_data1D[0], size, cudaMemcpyHostToDevice);
 
 	return d_data1D;
 }
 
-int cu_test_cuda ( cu_ptrs &d_ptrs, int nRow, int nCol ) {
+int cu_test_cuda ( const cu_ptrs &d_ptrs, const int nRow, const int nCol ) {
 
     cudaPrintfInit();
 
     cout << "Launching testKernel ..." << endl;
 
-    testKernel<<<100,512>>>(d_ptrs.bmag.ptr, d_ptrs.bmag.pitch, nRow, nCol);
+	check1Dcpy<<<1,1>>>( d_ptrs.z, nRow );
+	check2Dcpy<<<1,1>>>( d_ptrs.bmag.ptr, d_ptrs.bmag.pitch, nRow, nCol );
 
     cudaPrintfDisplay (stdout, true);
     cudaPrintfEnd();
