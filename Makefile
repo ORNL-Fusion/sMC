@@ -22,6 +22,7 @@ NETCDFDIR = /home/dg6/code/netcdf/netcdf_gnu64
 BOOSTDIR = /usr/include
 CUDADIR = /home/dg6/code/cuda/4.0/cuda
 CUDALIBDIR = ${CUDADIR}/lib64
+CUDA_SDK_DIR = 
 
 # Catch for greendl (my laptop)
 
@@ -32,6 +33,7 @@ ifeq ($(findstring greendl,$(HOSTNAME_OSX)),greendl)
 	BOOSTDIR = /opt/local/lib/boost
 	CUDADIR = /usr/local/cuda
 	CUDALIBDIR = ${CUDADIR}/lib
+	CUDA_SDK_DIR = /Developer/GPU\ Computing/C/src/simplePrintf
 endif
 
 ALGLIB = $(wildcard $(ALGLIBDIR)/*.o)
@@ -50,7 +52,7 @@ LDFLAGS = -pg
 
 NVCC = ${CUDADIR}/bin/nvcc
 NVCCFLAGS = -g -G --compiler-bindir ${GCCDIR}/bin
-INC += -I${CUDADIR}/include
+INC += -I${CUDADIR}/include -I${CUDA_SDK_DIR}
 LIBS += -L${CUDALIBDIR} -lcuda -lcudart
 
 ${EXEC}: ${OBJECTS} ${CUDA_OBJECTS}

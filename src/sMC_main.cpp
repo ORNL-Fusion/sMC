@@ -236,9 +236,26 @@ int main ()
 
 	stat = copy_particles_to_device ( particles );
 
-	REAL *d_bmag, *d_r;
-	d_bmag = copy_2D_to_device (eqdsk.bmag,eqdsk.nRow,eqdsk.nCol);
-	d_r = copy_1D_to_device (eqdsk.r,eqdsk.nCol);
+    cu_ptrs cu_device_ptrs;
+
+	cu_device_ptrs.r = copy_1D_to_device (eqdsk.r,eqdsk.nCol);
+	cu_device_ptrs.z = copy_1D_to_device (eqdsk.z,eqdsk.nRow);
+
+	cu_device_ptrs.bmag = copy_2D_to_device (eqdsk.bmag,eqdsk.nRow,eqdsk.nCol);
+
+	cu_device_ptrs.b_r = copy_2D_to_device (eqdsk.br,eqdsk.nRow,eqdsk.nCol);
+	cu_device_ptrs.b_p = copy_2D_to_device (eqdsk.bp,eqdsk.nRow,eqdsk.nCol);
+	cu_device_ptrs.b_z = copy_2D_to_device (eqdsk.bz,eqdsk.nRow,eqdsk.nCol);
+
+	cu_device_ptrs.bCurv_r = copy_2D_to_device (eqdsk.bCurvature_r,eqdsk.nRow,eqdsk.nCol);
+	cu_device_ptrs.bCurv_p = copy_2D_to_device (eqdsk.bCurvature_p,eqdsk.nRow,eqdsk.nCol);
+	cu_device_ptrs.bCurv_z = copy_2D_to_device (eqdsk.bCurvature_z,eqdsk.nRow,eqdsk.nCol);
+
+	cu_device_ptrs.bGrad_r = copy_2D_to_device (eqdsk.bGradient_r,eqdsk.nRow,eqdsk.nCol);
+	cu_device_ptrs.bGrad_p = copy_2D_to_device (eqdsk.bGradient_p,eqdsk.nRow,eqdsk.nCol);
+	cu_device_ptrs.bGrad_z = copy_2D_to_device (eqdsk.bGradient_z,eqdsk.nRow,eqdsk.nCol);
+
+    stat = cu_test_cuda ( cu_device_ptrs, eqdsk.nRow, eqdsk.nCol );
 
 	cout << "End of program :)" << endl;
 
