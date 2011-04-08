@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "boost/multi_array.hpp"
+
 #include "constants.hpp"
 
 //namespace eqdsk {
@@ -49,7 +50,7 @@ class Ceqdsk {
 
 			public: 
 				REAL i, j;
-				unsigned int i1, i2, j1, j2;
+				int i1, i2, j1, j2;
 		};
 
 		// Default constructor

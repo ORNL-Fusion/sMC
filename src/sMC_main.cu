@@ -1,6 +1,7 @@
 #include <iostream>
 #include "eqdsk.hpp"
 #include "particle.hpp"
+#include "rk_gc_particle.hpp"
 #include "gc_eqom.hpp"
 #include "read_pl.hpp"
 #include "constants.hpp"

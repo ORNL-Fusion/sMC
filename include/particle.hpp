@@ -24,7 +24,7 @@ class C_rkGCparticle {
 			bCurv_r, bCurv_p, bCurv_z, 
 			bGrad_r, bGrad_p, bGrad_z, 
 		   	unitb_r, unitb_p, unitb_z;
-
+		/*
 		void print () {
 
 			std::cout << std::endl;
@@ -33,36 +33,7 @@ class C_rkGCparticle {
 			std::cout << "\t  mu: " << mu  <<"\t vPer: "<< vPer <<"\t vPar: " << vPar << std::endl;
 
 		}
-};
-
-class Crk {
-
-	private:
-
-	public:
-		REAL r, p, z, vPar;
-		
-		// Default constructor
-		Crk () {r=0.0;p=0.0;z=0.0;vPar=0.0;}; 
-
-		// Copy constructor
-		Crk ( const Crk &K ) {*this = K;}	
-
-    	Crk& operator+=(const Crk &K);
-	   	Crk& operator-=(const Crk &K);
-		Crk& operator=(const Crk &K);
-
-    	friend Crk operator+(const Crk &K1, const Crk &K2);
-    	friend Crk operator-(const Crk &K1, const Crk &K2);
-    	friend Crk operator*(const REAL &f, const Crk &K);
-    	friend Crk operator*(const Crk &K, const REAL &f);
-    	friend Crk operator/(const REAL &f, const Crk &K);
-    	friend Crk operator/(const Crk &K, const REAL &f);
-
-		friend Crk Kabs(const Crk &K);
-		friend REAL Kmax(const Crk &K);
-		
-		void print();
+		*/
 };
 
 #endif

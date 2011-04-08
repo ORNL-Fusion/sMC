@@ -1,20 +1,22 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <iostream>
-#include "particle.hpp"
+#include "rk_gc_particle.hpp"
 #include "eqdsk.hpp"
 #include "constants.hpp"
 #include "cuda_wrap.h"
 #include "cuPrintf.cu"
 
 using namespace std;
-
 /*
-__device__ int cu_get_index 
-	( const REAL rIn, const REAL zIn, cu_interpIndex &index ) const {
+__device__ cu_interpIndex cu_get_index ( const REAL rIn, const REAL zIn, 
+	  const REAL rfront, const REAL rback, const unsigned int rsize,
+   	  const REAL zfront, const REAL zback, const unsigned int zsize ) {
 
-	index.j = (rIn - r.front()) / ( r.back() - r.front() ) * (r.size()-1.0);
-	index.i = (zIn - z.front()) / ( z.back() - z.front() ) * (z.size()-1.0);
+	cu_interpIndex index;
+
+	index.j = (rIn - rfront) / ( rback - rfront ) * (rsize-1);
+	index.i = (zIn - zfront) / ( zback - zfront ) * (zsize-1);
 
 	index.i1 = floor(index.i);
 	index.i2 = ceil(index.i);
@@ -22,16 +24,29 @@ __device__ int cu_get_index
 	index.j2 = ceil(index.j);
 
     // Check if particle is off grid	
-    if( index.i1<0 || index.i2>=(z.size()-1) ||
-        index.j1<0 || index.j2>=(r.size()-1) ) {
-        return 1;
+    if( index.i1<0 || index.i2>=(zsize-1) || index.j1<0 || index.j2>=(rsize-1) ) {
+        index.stat += 1;
     }
 
-	return 0;
+	return index;
+}
+
+__device__ REAL cu_bilinear_interp ( cu_interpIndex index, REAL *data ) {
+
+		REAL dataOut;
+
+		return dataOut;
 }
 */
-__global__ void testKernelA(int val) {
-	cuPrintf("Value is: %d\n", val);
+
+__device__ Crk cu_vGC () {
+
+		Crk vGC;
+
+		return vGC;
+}
+
+__global__ void cu_push () {
 }
 
 __global__ void check2Dcpy ( REAL *data2D, 
@@ -54,7 +69,6 @@ __global__ void check1Dcpy ( REAL *data1D, const unsigned int n ) {
 }
 
 int copy_particles_to_device (vector<Cgc_particle> &H_particles) {
-
 
     cout << "First CUDA call :)" << endl;
 

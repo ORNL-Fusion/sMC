@@ -1,11 +1,12 @@
 #include "eqdsk.hpp"
-#include "particle.hpp"
+#include "rk_gc_particle.hpp"
 #include "constants.hpp"
 #include <iostream>
 
 using namespace constants;
 using namespace std;
 
+/*
 int average_vGC 
 	(const C_rkGCparticle &p1, 
 	 const C_rkGCparticle &p2, 
@@ -27,7 +28,8 @@ int average_vGC
 
 	return 0;	
 }
-
+*/
+/*
 // Fill in position, mu and vPar for the next rk4 step.
 int euler ( const C_rkGCparticle &p1, C_rkGCparticle &p2, const REAL dt ) {
 
@@ -41,7 +43,7 @@ int euler ( const C_rkGCparticle &p1, C_rkGCparticle &p2, const REAL dt ) {
 
 	return 0;
 }
-
+*/
 // Calculate vGC given position, mu and vPar.
 Crk vGC ( const REAL dt, const Crk &p0, const REAL mu, Ceqdsk &eqdsk, int &err ) {
 

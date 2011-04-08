@@ -1,29 +1,12 @@
+NAME := bin/sMC
 
-OBJDIR = obj
-SRCDIR = src
-INCDIR = include
-BINDIR = bin
-
-SOURCES = $(basename $(wildcard $(SRCDIR)/*.cpp))
-OBJECTS = $(patsubst $(SRCDIR)/%,$(OBJDIR)/%.o,$(SOURCES))
-INCLUDES = $(wildcard $(SRCDIR)/*.hpp)
-
-CUDA_SOURCES = $(basename $(wildcard $(SRCDIR)/*.cu))
-CUDA_OBJECTS = $(patsubst $(SRCDIR)/%,$(OBJDIR)/%.o,$(CUDA_SOURCES))
-CUDA_INCLUDES = $(wildcard $(SRCDIR)/*_cuda.h)
-
-EXEC = ${BINDIR}/sMC
-LIBS =
-INC = -I${INCDIR}
-
-GCCDIR = /home/dg6/code/gcc/gcc-4.4.5
-ALGLIBDIR = /home/dg6/code/alglib/cpp/src
-NETCDFDIR = /home/dg6/code/netcdf/netcdf_gnu64
-BOOSTDIR = /usr/include
-CUDADIR = /home/dg6/code/cuda/4.0/cuda
+GCCDIR := /home/dg6/code/gcc/gcc-4.4.5/bin
+ALGLIBDIR := /home/dg6/code/alglib/cpp/src
+NETCDFDIR := /home/dg6/code/netcdf/netcdf_gnu64
+CUDADIR := /home/dg6/code/cuda/4.0/cuda
 CUDALIBDIR = ${CUDADIR}/lib64
-CUDA_SDK_DIR = /home/dg6/code/cuda/NVIDIA_GPU_Computing_SDK/C/src/simplePrintf
-CUDA_ARCH = sm_13
+CUDA_ARCH := sm_13
+CUDA_SDK_DIR := /home/dg6/code/cuda/NVIDIA_GPU_Computing_SDK/C/src/simplePrintf
 
 # Catch for greendl (my laptop)
 
@@ -38,35 +21,79 @@ ifeq ($(findstring greendl,$(HOSTNAME_OSX)),greendl)
 	CUDA_ARCH = sm_11
 endif
 
-ALGLIB = $(wildcard $(ALGLIBDIR)/*.o)
-OBJECTS += ${ALGLIB} 
-INC += -I${ALGLIBDIR}
+CC := $(GCCDIR)/gcc
+CPP := $(CUDADIR)/bin/nvcc #$(GCCDIR)/g++
+NVCC := $(CUDADIR)/bin/nvcc
+LINK := $(CPP)
 
-NETCDF = -L${NETCDFDIR}/lib -lnetcdf_c++ -lnetcdf
-LIBS += ${NETCDF}
-INC += -I${NETCDFDIR}/include
+MODULES := src include
 
-INC += -I${BOOSTDIR}
+INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR)
+CFLAGS := -g -std=c99
+CPPFLAGS :=
+NVCCFLAGS := -g -G --compiler-bindir $(GCCDIR) -arch $(CUDA_ARCH)
+LFLAGS := -g -L$(NETCDFDIR) -L$(CUDALIBDIR)
+LIBS := -lnetcdf_c++ -lnetcdf $(ALGLIBDIR)/*.o -lcuda -lcudart
 
-CXX = ${GCCDIR}/bin/g++
-CXXFLAGS = -Wall -g -pg
-LDFLAGS = -pg
+# You shouldn't have to go below here
+#
+# DLG: 	Added the -x c to force c file type so that 
+# 		the .cu files will work too :)
 
-NVCC = ${CUDADIR}/bin/nvcc
-NVCCFLAGS = -g -G --compiler-bindir ${GCCDIR}/bin -arch ${CUDA_ARCH}
-INC += -I${CUDADIR}/include -I${CUDA_SDK_DIR}
-LIBS += -L${CUDALIBDIR} -lcuda -lcudart
+DIRNAME = `dirname $1`
+MAKEDEPS = $(CC) -MM -MG $2 -x c $3 | sed -e "s@^\(.*\)\.o:@.dep/$1/\1.d obj/$1/\1.o:@"
 
-${EXEC}: ${OBJECTS} ${CUDA_OBJECTS}
-	${CXX} ${LDFLAGS} ${OBJECTS} ${CUDA_OBJECTS} ${LIBS} -o $@
+.PHONY : all
 
-${OBJDIR}/%.o: ${SRCDIR}/%.cpp ${INCLUDES}
-	${CXX} -c ${INC} ${CXXFLAGS} $< -o $@
+all : $(NAME)
 
-${OBJDIR}/%.o: ${SRCDIR}/%.cu ${CUDA_INCLUDES}
-	${NVCC} -c ${INC} ${NVCCFLAGS} $< -o $@
+# look for include files in each of the modules
+INCLUDEFLAGS += $(patsubst %, -I%, $(MODULES))
 
-.PHONY: clean
+CFLAGS += $(INCLUDEFLAGS)
+CPPFLAGS += $(INCLUDEFLAGS)
+NVCCFLAGS += $(INCLUDEFLAGS)
 
-clean:
-	rm -f ${OBJDIR}/*.o ${EXEC}
+# determine the object files
+SRCTYPES = c cpp cu
+OBJ := $(foreach srctype, $(SRCTYPES), $(patsubst %.$(srctype), obj/%.o, $(wildcard $(patsubst %, %/*.$(srctype), $(MODULES)))))
+
+# link the program
+$(NAME) : $(OBJ)
+	$(LINK) $(LFLAGS) -o $@ $(OBJ) $(LIBS)
+
+# calculate include dependencies
+.dep/%.d : %.cpp
+	@mkdir -p `echo '$@' | sed -e 's|/[^/]*.d$$||'`
+	$(call MAKEDEPS,$(call DIRNAME, $<), $(CPPFLAGS), $<) > $@
+
+obj/%.o : %.cpp
+	@mkdir -p `echo '$@' | sed -e 's|/[^/]*.o$$||'`
+	$(CPP) $(CPPFLAGS) -c -o $@ $<
+
+.dep/%.d : %.c
+	@mkdir -p `echo '$@' | sed -e 's|/[^/]*.d$$||'`
+	$(call MAKEDEPS,$(call DIRNAME, $<), $(CFLAGS), $<) > $@
+
+obj/%.o : %.c
+	@mkdir -p `echo '$@' | sed -e 's|/[^/]*.o$$||'`
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+.dep/%.d : %.cu
+	@mkdir -p `echo '$@' | sed -e 's|/[^/]*.d$$||'`
+	$(call MAKEDEPS,$(call DIRNAME, $<), $(INCLUDEFLAGS), $<) > $@
+
+obj/%.o : %.cu
+	@mkdir -p `echo '$@' | sed -e 's|/[^/]*.o$$||'`
+	$(NVCC) $(NVCCFLAGS) -c -o $@ $<
+
+
+# include the C include dependencies
+DEP := $(patsubst obj/%.o, .dep/%.d, $(OBJ))
+
+ifneq ($(MAKECMDGOALS),clean)
+include $(DEP)
+endif
+
+clean :
+	-@rm $(NAME) $(OBJ) $(DEP)

@@ -26,7 +26,8 @@ class cu_interpIndex {
 
 	public: 
 		REAL i, j;
-		unsigned int i1, i2, j1, j2;
+		int i1, i2, j1, j2;
+		unsigned int stat;
 };
 
 
