@@ -14,46 +14,6 @@ using namespace constants;
 
 #define __DIM2D__ boost::extents[nRow][nCol]
 
-int Ceqdsk::get_index 
-	( const REAL rIn, const REAL zIn, Ceqdsk::interpIndex &index ) const {
-
-	index.j = (rIn - r.front()) / ( r.back() - r.front() ) * (r.size()-1.0);
-	index.i = (zIn - z.front()) / ( z.back() - z.front() ) * (z.size()-1.0);
-
-	index.i1 = floor(index.i);
-	index.i2 = ceil(index.i);
-	index.j1 = floor(index.j);
-	index.j2 = ceil(index.j);
-
-    // Check if particle is off grid	
-    if( index.i1<0 || index.i2>=(z.size()-1) ||
-        index.j1<0 || index.j2>=(r.size()-1) ) {
-        return 1;
-    }
-
-	return 0;
-}
-
-// bi-linear interpolation
-// see wikipedia ;)
-REAL Ceqdsk::bilinear_interp 
-    ( const Ceqdsk::interpIndex &index , const boost::multi_array<REAL,2> &data ) const {
-
-	REAL f11 = data[index.i1][index.j1];
-	REAL f21 = data[index.i2][index.j1];
-	REAL f12 = data[index.i1][index.j2];
-	REAL f22 = data[index.i2][index.j2];
-
-	// (x2-x1)(y2-y1) == 1 since i'm using indices
-
-	REAL dataOut = f11 * (index.i2-index.i)*(index.j2-index.j)
-			+ f21 * (index.i-index.i1)*(index.j2-index.j)
-			+ f12 * (index.i2-index.i)*(index.j-index.j1)
-			+ f22 * (index.i-index.i1)*(index.j-index.j1); 
-
-    return dataOut;
-}
-
 int Ceqdsk::read_file ( string fName ) {
 
 	cout << "Reading g-eqdsk file " << fName << endl;

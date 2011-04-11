@@ -46,13 +46,6 @@ class Ceqdsk {
 			   gradB_r, gradB_z, bDotGradB, 
 			   bGradient_r, bGradient_p, bGradient_z;
 
-		class interpIndex {
-
-			public: 
-				REAL i, j;
-				int i1, i2, j1, j2;
-		};
-
 		// Default constructor
 		Ceqdsk () {}; 
 
@@ -63,10 +56,6 @@ class Ceqdsk {
 		int read_file ( std::string );
 		int write_ncfile ( std::string );
 		int bForceTerms ( const int _Z, const int amu);
-		int get_index 
-			( const REAL r, const REAL z, interpIndex &index ) const;
-		REAL bilinear_interp 
-    		( const interpIndex &index , const boost::multi_array<REAL,2> &data ) const;
 		int calc_b ( const unsigned int nrow, const unsigned int ncol );
 };
 

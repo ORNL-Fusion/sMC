@@ -8,6 +8,8 @@
 #include "cuPrintf.cu"
 
 using namespace std;
+
+
 /*
 __device__ cu_interpIndex cu_get_index ( const REAL rIn, const REAL zIn, 
 	  const REAL rfront, const REAL rback, const unsigned int rsize,

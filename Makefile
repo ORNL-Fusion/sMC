@@ -1,5 +1,7 @@
 NAME := bin/sMC
 
+# Defaults for dlg-hp.ornl.gov
+
 GCCDIR := /home/dg6/code/gcc/gcc-4.4.5/bin
 ALGLIBDIR := /home/dg6/code/alglib/cpp/src
 NETCDFDIR := /home/dg6/code/netcdf/netcdf_gnu64
@@ -8,31 +10,31 @@ CUDALIBDIR = ${CUDADIR}/lib64
 CUDA_ARCH := sm_13
 CUDA_SDK_DIR := /home/dg6/code/cuda/NVIDIA_GPU_Computing_SDK/C/src/simplePrintf
 
-# Catch for greendl (my laptop)
+# Catch for greendl.* (my laptop)
 
 ifeq ($(findstring greendl,$(HOSTNAME_OSX)),greendl)
-	GCCDIR = /opt/local
-	ALGLIBDIR = /home/dg6/code/alglib/cpp/src
-	NETCDFDIR = /opt/local
-	BOOSTDIR = /opt/local/lib/boost
-	CUDADIR = /usr/local/cuda
-	CUDALIBDIR = ${CUDADIR}/lib
-	CUDA_SDK_DIR = /Developer/GPU\ Computing/C/src/simplePrintf
-	CUDA_ARCH = sm_11
+GCCDIR := /opt/local/bin
+ALGLIBDIR := /home/dg6/code/alglib/cpp/src
+NETCDFDIR := /opt/local
+BOOSTDIR := /opt/local/include
+CUDADIR := /usr/local/cuda
+CUDALIBDIR := ${CUDADIR}/lib
+CUDA_SDK_DIR := /Developer/GPU\ Computing/C/src/simplePrintf
+CUDA_ARCH := sm_11
 endif
 
 CC := $(GCCDIR)/gcc
-CPP := $(CUDADIR)/bin/nvcc #$(GCCDIR)/g++
+CPP := $(CUDADIR)/bin/nvcc 
 NVCC := $(CUDADIR)/bin/nvcc
 LINK := $(CPP)
 
 MODULES := src include
 
-INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR)
+INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(BOOSTDIR)
 CFLAGS := -g -std=c99
 CPPFLAGS :=
 NVCCFLAGS := -g -G --compiler-bindir $(GCCDIR) -arch $(CUDA_ARCH)
-LFLAGS := -g -L$(NETCDFDIR) -L$(CUDALIBDIR)
+LFLAGS := -g -L$(NETCDFDIR)/lib -L$(CUDALIBDIR)
 LIBS := -lnetcdf_c++ -lnetcdf $(ALGLIBDIR)/*.o -lcuda -lcudart
 
 # You shouldn't have to go below here
