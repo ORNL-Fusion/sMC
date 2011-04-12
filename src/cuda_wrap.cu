@@ -6,6 +6,7 @@
 #include "constants.hpp"
 #include "cuda_wrap.h"
 #include "cuPrintf.cu"
+#include "array2D.hpp"
 
 using namespace std;
 
@@ -58,7 +59,7 @@ __global__ void check2Dcpy ( REAL *data2D,
 			REAL *row = (REAL*)((char*)data2D + r*pitch);
 			for (int c=0;c<nCol;++c) {
 					REAL element = row[c];
-                    cuPrintf("%i %i %f\n", r, c, element);
+                    //cuPrintf("%i %i %f\n", r, c, element);
 			}
 	}
 }
@@ -89,13 +90,13 @@ int copy_particles_to_device (vector<Cgc_particle> &H_particles) {
 }
 
 cu_ptr_pitch copy_2D_to_device 
-( boost::multi_array<REAL,2> &data2D, const unsigned int M, const unsigned int N ) {
+( array2D<REAL,BCHECK> &data2D, const unsigned int M, const unsigned int N ) {
 
     cu_ptr_pitch out;
 	size_t size = N * sizeof(REAL);
 
 	cudaMallocPitch ( (void**)&out.ptr, &out.pitch, size, M );
-	cudaMemcpy2D ( out.ptr, out.pitch, &data2D[0][0], 
+	cudaMemcpy2D ( out.ptr, out.pitch, &data2D(0,0), 
 					size, size, M, cudaMemcpyHostToDevice );
 
 	return out;

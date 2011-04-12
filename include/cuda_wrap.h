@@ -5,7 +5,8 @@
 #include "constants.hpp"
 #include "eqdsk.hpp"
 #include <vector>
-#include "boost/multi_array.hpp"
+//#include "boost/multi_array.hpp"
+#include "array2d.hpp"
 
 struct cu_ptr_pitch {
     REAL *ptr;
@@ -35,7 +36,7 @@ int
 copy_particles_to_device (std::vector<Cgc_particle> &H_particles);
 
 cu_ptr_pitch 
-copy_2D_to_device ( boost::multi_array<REAL,2> &data2D, const unsigned int nRow, const unsigned int nCol );
+copy_2D_to_device ( array2D<REAL,BCHECK> &data2D, const unsigned int nRow, const unsigned int nCol );
 
 REAL* 
 copy_1D_to_device ( std::vector<REAL> &h_data1D, const unsigned int n );

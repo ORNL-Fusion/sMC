@@ -2,8 +2,9 @@
 #define EQDSK_HPP_
 
 #include <vector>
-#include "boost/multi_array.hpp"
-
+//#include "boost/multi_array.hpp"
+#include <string>
+#include "array2D.hpp"
 #include "constants.hpp"
 
 //namespace eqdsk {
@@ -19,7 +20,7 @@ class Ceqdsk {
 
 		REAL xdum;
 	    int nCol_, nRow_;
-		boost::multi_array<REAL,2> psizr_;
+		array2D<REAL,BCHECK> psizr_;
 		std::vector<REAL> r_, z_, fpol_,fluxGrid_;
 		REAL dr_, dz_;
 
@@ -35,16 +36,18 @@ class Ceqdsk {
         REAL rmaxis,zmaxis,simag,sibry,bcentr;
         REAL current;
 
-		boost::multi_array<REAL,2> psizr, br, bz, bp, bmag, fpolzr;
+        array2D<REAL,BCHECK> 
+            psizr, br, bz, bp, bmag, fpolzr;
 		std::vector<REAL> pres, ffprim, pprime,
 			r, z, qpsi, rbbbs, zbbbs, rlim, zlim;
 
         REAL dr, dz;
         bool ascending_flux;
 
-		boost::multi_array<REAL,2> bCurvature_r, bCurvature_p, bCurvature_z,
-			   gradB_r, gradB_z, bDotGradB, 
-			   bGradient_r, bGradient_p, bGradient_z;
+        array2D<REAL,BCHECK>
+                bCurvature_r, bCurvature_p, bCurvature_z,
+			    gradB_r, gradB_z, bDotGradB, 
+			    bGradient_r, bGradient_p, bGradient_z;
 
 		// Default constructor
 		Ceqdsk () {}; 

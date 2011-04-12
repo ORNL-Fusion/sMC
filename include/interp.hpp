@@ -2,7 +2,8 @@
 #define INTERP_HPP_
 
 #include "constants.hpp"
-#include "boost/multi_array.hpp"
+//#include "boost/multi_array.hpp"
+#include "array2D.hpp"
 
 class interpIndex {
 
@@ -22,7 +23,7 @@ interpIndex get_index ( const REAL rIn, const REAL zIn,
 
 __host__ __device__
 REAL bilinear_interp 
-    ( const interpIndex &index , const REAL **data );
+    ( const interpIndex &index , const array2D<REAL,BCHECK> &data );
 
 
 #endif

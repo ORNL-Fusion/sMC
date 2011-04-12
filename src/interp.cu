@@ -1,6 +1,7 @@
 #include "constants.hpp"
-#include "boost/multi_array.hpp"
+//#include "boost/multi_array.hpp"
 #include "interp.hpp"
+#include "array2D.hpp"
 
 __host__ __device__
 interpIndex get_index ( const REAL rIn, const REAL zIn, 
@@ -29,12 +30,12 @@ interpIndex get_index ( const REAL rIn, const REAL zIn,
 // see wikipedia ;)
 __host__ __device__
 REAL bilinear_interp 
-    ( const interpIndex &index , const REAL **data ) {
+    ( const interpIndex &index , const array2D<REAL,BCHECK> &data ) {
 
-	REAL f11 = data[index.i1][index.j1];
-	REAL f21 = data[index.i2][index.j1];
-	REAL f12 = data[index.i1][index.j2];
-	REAL f22 = data[index.i2][index.j2];
+	REAL f11 = data(index.i1,index.j1);
+	REAL f21 = data(index.i2,index.j1);
+	REAL f12 = data(index.i1,index.j2);
+	REAL f22 = data(index.i2,index.j2);
 
 	// (x2-x1)(y2-y1) == 1 since i'm using indices
 

@@ -10,6 +10,7 @@
 #include <sstream>
 #include <ctime>
 #include "cuda_wrap.h"
+#include "interp.hpp"
 
 #define __SAVE_ORBITS__
 
@@ -41,11 +42,13 @@ int main ()
 	stat = read_pl ( plName, particles );
 
 	// Get bMag @ particle locations and calculate mu.
-	Ceqdsk::interpIndex index;
+	interpIndex index;
 	REAL bmag_p;
 	for(unsigned int p=0;p<particles.size();p++){
-		stat = eqdsk.get_index(particles[p].r,particles[p].z,index);
-		bmag_p = eqdsk.bilinear_interp ( index, eqdsk.bmag );
+		index = get_index(particles[p].r,particles[p].z,
+                    eqdsk.r.front(), eqdsk.r.back(), eqdsk.r.size(),
+                    eqdsk.z.front(), eqdsk.z.back(), eqdsk.z.size());
+		bmag_p = bilinear_interp ( index, eqdsk.bmag );
 		particles[p].mu = ( amu * _mi ) * pow(particles[p].vPer,2) / ( 2.0 * bmag_p );
 		particles[p].energy_eV = 0.5 * ( amu * _mi ) * 
 				( pow(particles[p].vPer,2) + pow(particles[p].vPar,2) ) / _e;
