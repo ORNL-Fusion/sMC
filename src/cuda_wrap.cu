@@ -52,14 +52,16 @@ __device__ Crk cu_vGC () {
 __global__ void cu_push () {
 }
 
-__global__ void check2Dcpy ( REAL *data2D, 
-				size_t pitch, const unsigned int nRow, const unsigned int nCol ) {
+__global__ void check2Dcpy ( const array2D<REAL,BCHECK> data2D, 
+				const unsigned int nRow, const unsigned int nCol ) {
 
 	for (int r=0;r<nRow;++r) {
-			REAL *row = (REAL*)((char*)data2D + r*pitch);
+			//REAL *row = (REAL*)((char*)data2D + r*pitch);
 			for (int c=0;c<nCol;++c) {
-					REAL element = row[c];
+					//REAL element = row[c];
                     //cuPrintf("%i %i %f\n", r, c, element);
+                    cuPrintf("%i %i %f\n", r, c, data2D(r,c));
+
 			}
 	}
 }
@@ -89,10 +91,12 @@ int copy_particles_to_device (vector<Cgc_particle> &H_particles) {
 	return 0;
 }
 
-cu_ptr_pitch copy_2D_to_device 
+//cu_ptr_pitch copy_2D_to_device 
+array2D<REAL,BCHECK> copy_2D_to_device
 ( array2D<REAL,BCHECK> &data2D, const unsigned int M, const unsigned int N ) {
 
-    cu_ptr_pitch out;
+    //cu_ptr_pitch out;
+    array2D<REAL,BCHECK> out;
 	size_t size = N * sizeof(REAL);
 
 	cudaMallocPitch ( (void**)&out.ptr, &out.pitch, size, M );
@@ -113,14 +117,14 @@ REAL* copy_1D_to_device
 	return d_data1D;
 }
 
-int cu_test_cuda ( const cu_ptrs &d_ptrs, const int nRow, const int nCol ) {
+int cu_test_cuda ( const cu_ptrs &d_ptrs, const array2D<REAL,BCHECK> &d_bmag, const int nRow, const int nCol ) {
 
     cudaPrintfInit();
 
     cout << "Launching testKernel ..." << endl;
 
 	check1Dcpy<<<1,1>>>( d_ptrs.z, nRow );
-	check2Dcpy<<<1,1>>>( d_ptrs.bmag.ptr, d_ptrs.bmag.pitch, nRow, nCol );
+	check2Dcpy<<<1,1>>>( d_bmag, nRow, nCol );
 
     cudaPrintfDisplay (stdout, true);
     cudaPrintfEnd();

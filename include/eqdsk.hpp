@@ -7,13 +7,6 @@
 #include "array2D.hpp"
 #include "constants.hpp"
 
-//namespace eqdsk {
-//    typedef boost::multi_array<REAL,2> boost::multi_array<REAL,2>;
-//    typedef std::vector<REAL> std::vector<REAL>;
-//}
-
-//using namespace eqdsk;
-
 class Ceqdsk {
 		
 	private:

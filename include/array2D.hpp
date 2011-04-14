@@ -13,14 +13,16 @@ template <class T, bool boundscheck = false>
 class array2D {
 
     private:
-        T *ptr;
 
     public:
+ 
+        T *ptr;
         unsigned int M, N;
+        size_t pitch;
 
         // Constructors
-        array2D(): M(0), N(0), ptr(NULL) {};
-        array2D(const unsigned int _M, const unsigned int _N) : ptr(NULL) {
+        array2D(): M(0), N(0), ptr(NULL), pitch(0) {};
+        array2D(const unsigned int _M, const unsigned int _N) : ptr(NULL), pitch(0) {
            resize(_M,_N); 
         }
         // copy constructor
@@ -30,11 +32,13 @@ class array2D {
 
         // conversion constructor 
         template<class T2>
-        array2D(const array2D<T2,BCHECK>&source) {
+        array2D(const array2D<T2,boundscheck>&source) {
+            pitch = 0;
+            ptr = NULL;
             resize(source.M,source.N);
             for(size_t n=0;n<N;++n) {
                 for(size_t m=0;m<M;++m) {
-                    ptr[ n + N * m ] = source(m,n);
+                    ptr[ n + N * m ] = (T)source(m,n);
                 }
             }
         }
@@ -54,11 +58,15 @@ class array2D {
         __host__ __device__
 #endif
         T &operator()( const unsigned int m, const unsigned int n ) const {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
             if(boundscheck)
                 ASSERT_MSG((n < N) && (m < M), "array2D bounds check failed, !((%u < %u) && (%u < %u))", n, N, m, M);
-#endif
+
             return ptr[n + N * m];
+#else
+			T *row = (T*)((char*)ptr + m*N);
+            return row[n];
+#endif
         } 
 
         void resize(int _M, int _N) {
@@ -67,11 +75,8 @@ class array2D {
             N = _N;
            
             // what the crap is going on here? 
-            if(ptr) {
-                //std::cout << "Deleting ptr ... ";
+            if(ptr) 
                 delete ptr;
-                //std::cout << "DONE" << std::endl;
-            }
             
             if(M != 0 && N != 0) {
               ptr = new T[M * N];

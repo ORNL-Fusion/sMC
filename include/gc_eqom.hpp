@@ -4,15 +4,9 @@
 #include "rk_gc_particle.hpp"
 #include "eqdsk.hpp"
 #include "constants.hpp"
+#include "interp.hpp"
 
-Crk vGC ( const REAL dt, const Crk &p0, const REAL mu, Ceqdsk &eqdsk, int &err );
-//int euler ( const C_rkGCparticle &p1, C_rkGCparticle &p2, const REAL dt );
-/*
-int average_vGC 
-	(const C_rkGCparticle &p1, 
-	 const C_rkGCparticle &p2, 
-	 const C_rkGCparticle &p3, 
-	 const C_rkGCparticle &p4, 
-	 C_rkGCparticle &pf, const REAL dt);
-*/
+Crk vGC ( const REAL dt, const Crk &p0, const REAL mu, 
+            Ceqdsk &eqdsk, const interpSpans &span, int &err );
+
 #endif

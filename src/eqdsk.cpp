@@ -11,7 +11,6 @@
 #include "array2D.hpp"
 
 using namespace std;
-using namespace constants;
 
 //#define nRow,nCol boost::extents[nRow][nCol]
 

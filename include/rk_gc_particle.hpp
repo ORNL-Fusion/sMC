@@ -43,7 +43,6 @@ class Crk {
 	   	__host__ __device__
 			friend REAL Kmax(const Crk &K);
 		
-		//void print();
 };
 
 #endif

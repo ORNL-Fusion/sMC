@@ -4,14 +4,12 @@
 #include "array2D.hpp"
 
 __host__ __device__
-interpIndex get_index ( const REAL rIn, const REAL zIn, 
-	  const REAL rfront, const REAL rback, const unsigned int rsize,
-   	  const REAL zfront, const REAL zback, const unsigned int zsize ) {
+interpIndex get_index ( const REAL rIn, const REAL zIn, const interpSpans &spans ) {
 
     interpIndex index;
 
-	index.j = (rIn - rfront) / ( rback - rfront ) * (rsize-1);
-	index.i = (zIn - zfront) / ( zback - zfront ) * (zsize-1);
+	index.j = (rIn - spans.rfront) / ( spans.rback - spans.rfront ) * (spans.rsize-1);
+	index.i = (zIn - spans.zfront) / ( spans.zback - spans.zfront ) * (spans.zsize-1);
 
 	index.i1 = floor(index.i);
 	index.i2 = ceil(index.i);
@@ -19,7 +17,7 @@ interpIndex get_index ( const REAL rIn, const REAL zIn,
 	index.j2 = ceil(index.j);
 
     // Check if particle is off grid	
-    if( index.i1<0 || index.i2>=(zsize-1) || index.j1<0 || index.j2>=(rsize-1) ) {
+    if( index.i1<0 || index.i2>=(spans.zsize-1) || index.j1<0 || index.j2>=(spans.rsize-1) ) {
         index.stat += 1;
     }
 

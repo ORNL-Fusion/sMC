@@ -3,10 +3,7 @@
 
 #define REAL float
 
-namespace constants 
-{
-	extern const double _e;
-	extern const double _mi;
-}
+#define _e 1.602176e-19
+#define _mi 1.67262158e-27
 
 #endif

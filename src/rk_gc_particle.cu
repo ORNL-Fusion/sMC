@@ -84,8 +84,3 @@ __host__ __device__ REAL Kmax (const Crk &K) {
 	return maxVal;
 }
 
-/*
-void Crk::print () {
-	std::cout <<"\t"<<r<<"\t"<<p<<"\t"<<z<<"\t"<<vPar<<std::endl;
-}
-*/

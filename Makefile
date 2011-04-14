@@ -32,7 +32,7 @@ MODULES := src include
 
 INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(BOOSTDIR)
 CFLAGS := -g -std=c99
-CPPFLAGS :=
+CPPFLAGS := -g
 NVCCFLAGS := -g -G --compiler-bindir $(GCCDIR) -arch $(CUDA_ARCH)
 LFLAGS := -g -L$(NETCDFDIR)/lib -L$(CUDALIBDIR)
 LIBS := -lnetcdf_c++ -lnetcdf $(ALGLIBDIR)/*.o -lcuda -lcudart
