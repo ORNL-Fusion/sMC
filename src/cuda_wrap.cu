@@ -55,12 +55,14 @@ __global__ void cu_push () {
 __global__ void check2Dcpy ( const array2D<REAL,BCHECK> data2D, 
 				const unsigned int nRow, const unsigned int nCol ) {
 
+    //cuPrintf("%i %i\n", data2D.ptr, data2D.pitch);
+
 	for (int r=0;r<nRow;++r) {
-			//REAL *row = (REAL*)((char*)data2D + r*pitch);
+			REAL *row = (REAL*)((char*)data2D.ptr + r*data2D.pitch);
 			for (int c=0;c<nCol;++c) {
-					//REAL element = row[c];
-                    //cuPrintf("%i %i %f\n", r, c, element);
-                    cuPrintf("%i %i %f\n", r, c, data2D(r,c));
+					REAL element = row[c];
+                    cuPrintf("%i %i %f\n", r, c, element);
+                    //cuPrintf("%i %i %f\n", r, c, data2D(r,c));
 
 			}
 	}
@@ -103,6 +105,8 @@ array2D<REAL,BCHECK> copy_2D_to_device
 	cudaMemcpy2D ( out.ptr, out.pitch, &data2D(0,0), 
 					size, size, M, cudaMemcpyHostToDevice );
 
+    cout << out.ptr << endl;
+    cout << out.pitch << endl;
 	return out;
 }
 
@@ -121,9 +125,12 @@ int cu_test_cuda ( const cu_ptrs &d_ptrs, const array2D<REAL,BCHECK> &d_bmag, co
 
     cudaPrintfInit();
 
-    cout << "Launching testKernel ..." << endl;
+    cout << d_bmag.ptr << endl;
+    cout << d_bmag.pitch << endl;
 
+    cout << "Testing 1D memcopy ..." << endl;
 	check1Dcpy<<<1,1>>>( d_ptrs.z, nRow );
+    cout << "Testing 2D memcopy ..." << endl;
 	check2Dcpy<<<1,1>>>( d_bmag, nRow, nCol );
 
     cudaPrintfDisplay (stdout, true);

@@ -27,6 +27,7 @@ class array2D {
         }
         // copy constructor
         array2D(const array2D &source) {
+            std::cout << "copy" << std::endl;
             *this = source;
         }
 
@@ -45,6 +46,7 @@ class array2D {
 
         // assignment 
         array2D &operator=(const array2D &source) {
+            std::cout << "=" << std::endl;
             // this resize
             resize ( source.M, source.N );
             // copy data pointer to
@@ -52,6 +54,15 @@ class array2D {
             // not sure i understant this?
             return *this;
         }
+
+        // cuda assignment 
+        array2D &operator<<(const array2D &source) {
+            std::cout << "<<" << std::endl;
+            this->ptr = source.ptr;
+            this->pitch = source.pitch;
+            return *this;
+        }
+
 
         // indexing
 #ifdef __CUDACC__
@@ -71,10 +82,11 @@ class array2D {
 
         void resize(int _M, int _N) {
 
+            std::cout << "resize" << std::endl;
+
             M = _M;
             N = _N;
            
-            // what the crap is going on here? 
             if(ptr) 
                 delete ptr;
             

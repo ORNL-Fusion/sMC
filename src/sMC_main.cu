@@ -247,8 +247,11 @@ int main ()
 	d_ptrs.z = copy_1D_to_device (eqdsk.z,eqdsk.nRow);
 
 	//d_ptrs.bmag = copy_2D_to_device (eqdsk.bmag,eqdsk.nRow,eqdsk.nCol);
-	array2D<REAL,BCHECK> d_bmag ( copy_2D_to_device (eqdsk.bmag,eqdsk.nRow,eqdsk.nCol) );
+	array2D<REAL,BCHECK> d_bmag; 
+    d_bmag << copy_2D_to_device (eqdsk.bmag,eqdsk.nRow,eqdsk.nCol);
 
+    cout << d_bmag.ptr << endl;
+    cout << d_bmag.pitch << endl;
     /*
 	d_ptrs.b_r = copy_2D_to_device (eqdsk.br,eqdsk.nRow,eqdsk.nCol);
 	d_ptrs.b_p = copy_2D_to_device (eqdsk.bp,eqdsk.nRow,eqdsk.nCol);
