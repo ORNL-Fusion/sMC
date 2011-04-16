@@ -52,17 +52,19 @@ __device__ Crk cu_vGC () {
 __global__ void cu_push () {
 }
 
-__global__ void check2Dcpy ( const array2D<REAL,BCHECK> data2D, 
+__global__ void check2Dcpy ( const cu_ptr_pitch data_, 
 				const unsigned int nRow, const unsigned int nCol ) {
 
-    //cuPrintf("%i %i\n", data2D.ptr, data2D.pitch);
+    array2D<REAL,BCHECK> data2D;
+    data2D.ptr = data_.ptr;
+    data2D.pitch = data_.pitch;
 
 	for (int r=0;r<nRow;++r) {
-			REAL *row = (REAL*)((char*)data2D.ptr + r*data2D.pitch);
+			REAL *row = (REAL*)((char*)data_.ptr + r*data_.pitch);
 			for (int c=0;c<nCol;++c) {
 					REAL element = row[c];
                     cuPrintf("%i %i %f\n", r, c, element);
-                    //cuPrintf("%i %i %f\n", r, c, data2D(r,c));
+                    cuPrintf("%i %i %f\n", r, c, data2D(r,c));
 
 			}
 	}
@@ -93,20 +95,16 @@ int copy_particles_to_device (vector<Cgc_particle> &H_particles) {
 	return 0;
 }
 
-//cu_ptr_pitch copy_2D_to_device 
-array2D<REAL,BCHECK> copy_2D_to_device
+cu_ptr_pitch copy_2D_to_device
 ( array2D<REAL,BCHECK> &data2D, const unsigned int M, const unsigned int N ) {
 
-    //cu_ptr_pitch out;
-    array2D<REAL,BCHECK> out;
+    cu_ptr_pitch out;
 	size_t size = N * sizeof(REAL);
 
 	cudaMallocPitch ( (void**)&out.ptr, &out.pitch, size, M );
 	cudaMemcpy2D ( out.ptr, out.pitch, &data2D(0,0), 
 					size, size, M, cudaMemcpyHostToDevice );
 
-    cout << out.ptr << endl;
-    cout << out.pitch << endl;
 	return out;
 }
 
@@ -121,17 +119,14 @@ REAL* copy_1D_to_device
 	return d_data1D;
 }
 
-int cu_test_cuda ( const cu_ptrs &d_ptrs, const array2D<REAL,BCHECK> &d_bmag, const int nRow, const int nCol ) {
+int cu_test_cuda ( const cu_ptrs &d_ptrs, const int nRow, const int nCol ) {
 
     cudaPrintfInit();
-
-    cout << d_bmag.ptr << endl;
-    cout << d_bmag.pitch << endl;
 
     cout << "Testing 1D memcopy ..." << endl;
 	check1Dcpy<<<1,1>>>( d_ptrs.z, nRow );
     cout << "Testing 2D memcopy ..." << endl;
-	check2Dcpy<<<1,1>>>( d_bmag, nRow, nCol );
+	check2Dcpy<<<1,1>>>( d_ptrs.bmag, nRow, nCol );
 
     cudaPrintfDisplay (stdout, true);
     cudaPrintfEnd();

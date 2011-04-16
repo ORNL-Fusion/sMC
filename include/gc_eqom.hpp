@@ -7,6 +7,6 @@
 #include "interp.hpp"
 
 Crk vGC ( const REAL dt, const Crk &p0, const REAL mu, 
-            Ceqdsk &eqdsk, const interpSpans &span, int &err );
+            const Ceqdsk &eqdsk, const CinterpSpans &span, int &err );
 
 #endif

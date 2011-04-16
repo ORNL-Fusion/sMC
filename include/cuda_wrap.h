@@ -35,15 +35,14 @@ class cu_interpIndex {
 int 
 copy_particles_to_device (std::vector<Cgc_particle> &H_particles);
 
-//cu_ptr_pitch 
-array2D<REAL,BCHECK>
+cu_ptr_pitch 
 copy_2D_to_device ( array2D<REAL,BCHECK> &data2D, const unsigned int nRow, const unsigned int nCol );
 
 REAL* 
 copy_1D_to_device ( std::vector<REAL> &h_data1D, const unsigned int n );
 
 int 
-cu_test_cuda ( const cu_ptrs &d_ptrs, const array2D<REAL,BCHECK> &d_bmag, const int nRow, const int nCol );
+cu_test_cuda ( const cu_ptrs &d_ptrs, const int nRow, const int nCol );
 
 #endif
 

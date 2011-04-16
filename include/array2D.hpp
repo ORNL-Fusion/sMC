@@ -21,13 +21,15 @@ class array2D {
         size_t pitch;
 
         // Constructors
+#ifdef __CUDACC__
+        __host__ __device__
+#endif
         array2D(): M(0), N(0), ptr(NULL), pitch(0) {};
         array2D(const unsigned int _M, const unsigned int _N) : ptr(NULL), pitch(0) {
            resize(_M,_N); 
         }
         // copy constructor
         array2D(const array2D &source) {
-            std::cout << "copy" << std::endl;
             *this = source;
         }
 
@@ -46,7 +48,6 @@ class array2D {
 
         // assignment 
         array2D &operator=(const array2D &source) {
-            std::cout << "=" << std::endl;
             // this resize
             resize ( source.M, source.N );
             // copy data pointer to
@@ -57,7 +58,6 @@ class array2D {
 
         // cuda assignment 
         array2D &operator<<(const array2D &source) {
-            std::cout << "<<" << std::endl;
             this->ptr = source.ptr;
             this->pitch = source.pitch;
             return *this;
@@ -75,14 +75,12 @@ class array2D {
 
             return ptr[n + N * m];
 #else
-			T *row = (T*)((char*)ptr + m*N);
+			T *row = (T*)( (char*)ptr + m * pitch);
             return row[n];
 #endif
         } 
 
         void resize(int _M, int _N) {
-
-            std::cout << "resize" << std::endl;
 
             M = _M;
             N = _N;

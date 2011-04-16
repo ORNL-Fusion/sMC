@@ -1,12 +1,11 @@
 #include "constants.hpp"
-//#include "boost/multi_array.hpp"
 #include "interp.hpp"
 #include "array2D.hpp"
 
 __host__ __device__
-interpIndex get_index ( const REAL rIn, const REAL zIn, const interpSpans &spans ) {
+CinterpIndex get_index ( const REAL rIn, const REAL zIn, const CinterpSpans &spans ) {
 
-    interpIndex index;
+    CinterpIndex index;
 
 	index.j = (rIn - spans.rfront) / ( spans.rback - spans.rfront ) * (spans.rsize-1);
 	index.i = (zIn - spans.zfront) / ( spans.zback - spans.zfront ) * (spans.zsize-1);
@@ -28,7 +27,7 @@ interpIndex get_index ( const REAL rIn, const REAL zIn, const interpSpans &spans
 // see wikipedia ;)
 __host__ __device__
 REAL bilinear_interp 
-    ( const interpIndex &index , const array2D<REAL,BCHECK> &data ) {
+    ( const CinterpIndex &index , const array2D<REAL,BCHECK> &data ) {
 
 	REAL f11 = data(index.i1,index.j1);
 	REAL f21 = data(index.i2,index.j1);

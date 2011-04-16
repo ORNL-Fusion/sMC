@@ -9,13 +9,13 @@ using namespace std;
 // Calculate vGC given position, mu and vPar.
 __host__ __device__
 Crk vGC ( const REAL dt, const Crk &p0, const REAL mu, 
-            Ceqdsk &eqdsk, const interpSpans &spans, int &err ) {
+            const Ceqdsk &eqdsk, const CinterpSpans &spans, int &err ) {
 
 	Crk vGC;
 
 	// get background data(s) at particle location
 	
-	interpIndex index;
+	CinterpIndex index;
 	index = get_index ( p0.r, p0.z,	spans );
 
 	if(index.stat) {
