@@ -24,18 +24,23 @@ CUDA_ARCH := sm_11
 endif
 
 CC := $(GCCDIR)/gcc
-CPP := $(CUDADIR)/bin/nvcc 
+CPP := $(GCCDIR)/g++
 NVCC := $(CUDADIR)/bin/nvcc
-LINK := $(CPP)
 
 MODULES := src include
 
 INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(BOOSTDIR)
-CFLAGS := -g -std=c99
+CFLAGS := 
 CPPFLAGS := -g
 NVCCFLAGS := -g -G --compiler-bindir $(GCCDIR) -arch $(CUDA_ARCH)
-LFLAGS := -g -L$(NETCDFDIR)/lib -L$(CUDALIBDIR)
+LFLAGS := -L$(NETCDFDIR)/lib -L$(CUDALIBDIR)
 LIBS := -lnetcdf_c++ -lnetcdf $(ALGLIBDIR)/*.o -lcuda -lcudart
+
+USECUDA:=true 
+#CPP := $(NVCC)
+#CPPFLAGS := $(NVCCFLAGS)
+
+LINK := $(CPP)
 
 # You shouldn't have to go below here
 #
@@ -57,7 +62,10 @@ CPPFLAGS += $(INCLUDEFLAGS)
 NVCCFLAGS += $(INCLUDEFLAGS)
 
 # determine the object files
-SRCTYPES = c cpp cu
+SRCTYPES := c cpp 
+ifdef USECUDA
+SRCTYPES += cu
+endif
 OBJ := $(foreach srctype, $(SRCTYPES), $(patsubst %.$(srctype), obj/%.o, $(wildcard $(patsubst %, %/*.$(srctype), $(MODULES)))))
 
 # link the program
@@ -67,7 +75,7 @@ $(NAME) : $(OBJ)
 # calculate include dependencies
 .dep/%.d : %.cpp
 	@mkdir -p `echo '$@' | sed -e 's|/[^/]*.d$$||'`
-	$(call MAKEDEPS,$(call DIRNAME, $<), $(CPPFLAGS), $<) > $@
+	$(call MAKEDEPS,$(call DIRNAME, $<), $(INCLUDEFLAGS), $<) > $@
 
 obj/%.o : %.cpp
 	@mkdir -p `echo '$@' | sed -e 's|/[^/]*.o$$||'`
@@ -98,4 +106,4 @@ include $(DEP)
 endif
 
 clean :
-	-@rm $(NAME) $(OBJ) $(DEP)
+	-@rm $(NAME) $(OBJ) $(DEP) .dep/src/*

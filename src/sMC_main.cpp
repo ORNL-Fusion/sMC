@@ -5,9 +5,10 @@
 #include "constants.hpp"
 #include <vector>
 #include <ctime>
-#include "cuda_wrap.h"
 #include "interp.hpp"
 #include "rkf.hpp"
+
+#include "cuda_wrap.hpp"
 
 using namespace std;
 
@@ -34,6 +35,24 @@ int main ()
     CinterpSpans spans (eqdsk.r.front(), eqdsk.r.back(), eqdsk.r.size(), 
             eqdsk.z.front(), eqdsk.z.back(), eqdsk.z.size() );
 
+    // Create the textures container
+    Ctextures textures;
+    textures.bmag = eqdsk.bmag;
+    textures.bDotGradB = eqdsk.bDotGradB;
+
+    textures.b_r = eqdsk.br;
+    textures.b_p = eqdsk.bp;
+    textures.b_z = eqdsk.bz;
+
+    textures.bCurv_r = eqdsk.bCurvature_r;
+    textures.bCurv_p = eqdsk.bCurvature_p;
+    textures.bCurv_z = eqdsk.bCurvature_z;
+
+    textures.bGrad_r = eqdsk.bGradient_r;
+    textures.bGrad_p = eqdsk.bGradient_p;
+    textures.bGrad_z = eqdsk.bGradient_z;
+
+    // Create the particle list
 	vector<Cgc_particle> particles;	
 
 	string plName = "data/pList.dav.nc.000";
@@ -61,7 +80,7 @@ int main ()
 			cout << "Particle No. " << p << endl;
 			cout << "eV: " << particles[p].energy_eV << endl;
 
-            stat = move_particle ( particles[p], eqdsk, spans, p );
+            stat = move_particle ( particles[p], textures, spans, p );
 			
 		} // end if(!particle[p].status)
 	} // end for(p)
@@ -72,28 +91,7 @@ int main ()
 
     cout << "*** CUDA ***" << endl;
 
-	stat = copy_particles_to_device ( particles );
-
-    cu_ptrs d_ptrs;
-
-	d_ptrs.r = copy_1D_to_device (eqdsk.r,eqdsk.nCol);
-	d_ptrs.z = copy_1D_to_device (eqdsk.z,eqdsk.nRow);
-
-	d_ptrs.bmag = copy_2D_to_device (eqdsk.bmag,eqdsk.nRow,eqdsk.nCol);
-    
-	d_ptrs.b_r = copy_2D_to_device (eqdsk.br,eqdsk.nRow,eqdsk.nCol);
-	d_ptrs.b_p = copy_2D_to_device (eqdsk.bp,eqdsk.nRow,eqdsk.nCol);
-	d_ptrs.b_z = copy_2D_to_device (eqdsk.bz,eqdsk.nRow,eqdsk.nCol);
-
-	d_ptrs.bCurv_r = copy_2D_to_device (eqdsk.bCurvature_r,eqdsk.nRow,eqdsk.nCol);
-	d_ptrs.bCurv_p = copy_2D_to_device (eqdsk.bCurvature_p,eqdsk.nRow,eqdsk.nCol);
-	d_ptrs.bCurv_z = copy_2D_to_device (eqdsk.bCurvature_z,eqdsk.nRow,eqdsk.nCol);
-
-	d_ptrs.bGrad_r = copy_2D_to_device (eqdsk.bGradient_r,eqdsk.nRow,eqdsk.nCol);
-	d_ptrs.bGrad_p = copy_2D_to_device (eqdsk.bGradient_p,eqdsk.nRow,eqdsk.nCol);
-	d_ptrs.bGrad_z = copy_2D_to_device (eqdsk.bGradient_z,eqdsk.nRow,eqdsk.nCol);
-
-    stat = cu_test_cuda ( d_ptrs, eqdsk.nRow, eqdsk.nCol );
+    stat = cu_test_cuda ( particles, eqdsk.nRow, eqdsk.nCol, spans, eqdsk );
 
 	cout << "End of program :)" << endl;
 

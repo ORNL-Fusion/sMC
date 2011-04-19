@@ -2,7 +2,6 @@
 #define EQDSK_HPP_
 
 #include <vector>
-//#include "boost/multi_array.hpp"
 #include <string>
 #include "array2D.hpp"
 #include "constants.hpp"
