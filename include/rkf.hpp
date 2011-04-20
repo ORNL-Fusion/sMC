@@ -12,10 +12,10 @@
 #include "constants.hpp"
 
 #ifdef __CUDA_ARCH__
-//#include "cuPrintf.cu"
+#include "cuPrintf.cu"
 #endif
 
-//#define __SAVE_ORBITS__
+#define __SAVE_ORBITS__
 
 // Runge-Kutta-Fehlberg integrator
 // pg. 254 Burden and Faires
@@ -56,19 +56,21 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	w.z = p.z;
 	w.vPar = p.vPar;
 
+#ifndef __CUDA_ARCH__
 #ifdef __SAVE_ORBITS__
 	std::vector<REAL> rOut(1,p.r);	
 	std::vector<REAL> pOut(1,p.p);	
 	std::vector<REAL> zOut(1,p.z);	
 #endif
-    
+#endif
+   
 	while(FLAG==1) {
 
 		// Given a position, mu and vPar calculate vGC
 		K1 = dt * vGC ( 0.0, 
 				w, 
 				p.mu, textures, spans, err );
-		
+
 		K2 = dt * vGC ( 1.0/4.0 * dt, 
 				w + K1 * 1.0/4.0, 
                 p.mu, textures, spans, err );
@@ -91,7 +93,8 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 		if(err) {
 			p.status = err;
-			break;
+            return err;
+			//break;
 		}
 
 		R = Kabs ( 1.0/360.0*K1 - 128.0/4275.0*K3 - 2197.0/75240.0*K4 + 1.0/50.0*K5 + 2.0/55.0*K6 ) / dt;
@@ -123,6 +126,8 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 		if(dt>dtMax) {
 #ifndef __CUDA_ARCH__
 			std::cout << "\tdtMax reached: " << dt <<" "<< dtMax << std::endl;
+#else
+			cuPrintf("dtMax reached: %f, %f\n",dt,dtMax);
 #endif
 		dt = dtMax;
 		}
@@ -130,9 +135,6 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 		// End of desired time
 		if(t>=runTime) {
 			FLAG = 0;
-#ifndef __CUDA_ARCH__
-			std::cout << "\teV: "<<p.energy_eV<<std::endl;
-#endif
 		}
 		else if(t+dt>runTime) {
 			// Make sure integration ends == runTime
@@ -146,6 +148,13 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			std::cout << "\tTOL: "<<TOL<<std::endl;
 			std::cout << "\tvPer: "<<p.vPer<<std::endl;
 			std::cout << "\teV: "<<p.energy_eV<<std::endl;
+#else
+			cuPrintf("dtMin reached: %f, %f\n",dt,dtMin);
+			cuPrintf("delta: %f\n",delta);
+			cuPrintf("R_: %f\n",R_);
+			cuPrintf("TOL: %f\n",TOL);
+			cuPrintf("vPer: %f\n",p.vPer);
+			cuPrintf("eV: %f\n",p.energy_eV);
 #endif
 			dt = dtMin;
 			FLAG = 0;
@@ -153,11 +162,17 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 		ii++;
 
+#ifndef __CUDA_ARCH__
 #ifdef __SAVE_ORBITS__
 		rOut.push_back(w.r);
 		pOut.push_back(w.p);
 		zOut.push_back(w.z);
 #endif
+#endif
+    //if(pp==4 && ii>9900)
+    //    return 0; 
+
+
 	} // end while(FLAG=1)
 
 	p.r = w.r; 
@@ -168,9 +183,10 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 #ifndef __CUDA_ARCH__
 	std::cout << "\t nSteps: " << ii << std::endl;
 #else
-    //cuPrintf("nSteps: %i\n", ii);
+    cuPrintf("nSteps: %i\n", ii);
 #endif
 
+#ifndef __CUDA_ARCH__
 #ifdef __SAVE_ORBITS__
 	std::stringstream orb_fName;
 	orb_fName << std::setfill('0');
@@ -198,6 +214,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	nc_zOrb->put(&zOut[0],nSteps);
 	nc_stat->put(&p.status,1);
 	nc_vPar->put(&p.vPar,1);
+#endif
 #endif
 
     return err;

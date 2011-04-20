@@ -75,8 +75,24 @@ class array2D {
 
             return ptr[n + N * m];
 #else
-			T *row = (T*)( (char*)ptr + m * pitch);
-            return row[n];
+            unsigned int m_, n_;
+
+            if(m>=M) {
+                m_ = M-1;
+            }
+            else {
+                m_ = m;
+            }
+
+            if(n>=N) {
+                n_ = N-1;
+            }
+            else {
+                n_ = n;
+            }
+
+			T *row = (T*)( (char*)ptr + m_ * pitch);
+            return row[n_];
 #endif
         } 
 

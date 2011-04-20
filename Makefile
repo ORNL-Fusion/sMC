@@ -29,12 +29,12 @@ NVCC := $(CUDADIR)/bin/nvcc
 
 MODULES := src include
 
-INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(BOOSTDIR)
+INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(BOOSTDIR) -I$(NETCDFDIR)/include
 CFLAGS := 
 CPPFLAGS := -g
 NVCCFLAGS := -g -G --compiler-bindir $(GCCDIR) -arch $(CUDA_ARCH)
-LFLAGS := -L$(NETCDFDIR)/lib -L$(CUDALIBDIR)
-LIBS := -lnetcdf_c++ -lnetcdf $(ALGLIBDIR)/*.o -lcuda -lcudart
+LFLAGS := -L$(NETCDFDIR)/lib -L$(CUDALIBDIR) 
+LIBS := $(ALGLIBDIR)/*.o -lcuda -lcudart -lnetcdf_c++ -lnetcdf
 
 USECUDA:=true 
 #CPP := $(NVCC)

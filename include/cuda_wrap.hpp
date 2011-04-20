@@ -9,7 +9,7 @@
 #include "interp.hpp"
 #include "cuda_classes.hpp"
 
-cu_ptr_pitch copy_2D_to_device ( const array2D<REAL,BCHECK> &data2D, 
+Ccu_ptr_pitch copy_2D_to_device ( const array2D<REAL,BCHECK> &data2D, 
     const unsigned int nRow, const unsigned int nCol );
 
 REAL* copy_1D_to_device ( const std::vector<REAL> &h_data1D, const unsigned int n );

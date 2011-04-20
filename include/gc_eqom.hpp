@@ -8,6 +8,10 @@
 #include "array2D.hpp"
 #include <iostream>
 
+#ifdef __CUDA_ARCH__
+#include "cuPrintf.cu"
+#endif
+
 class Ctextures {
     public:
         array2D<REAL,BCHECK> bmag,
@@ -26,57 +30,53 @@ Crk vGC ( const REAL dt, const Crk &p0, const REAL mu,
 
 	Crk vGC;
 
-	// get background data(s) at particle location
-	
-	CinterpIndex index;
-	index = get_index ( p0.r, p0.z,	spans );
+    if(!err) {
 
-	if(index.stat) {
+	    // get background data(s) at particle location
+        
+	    CinterpIndex index;
+	    index = get_index ( p0.r, p0.z,	spans );
+        
+	    if(index.stat>=1) {
+            err++;
+            return vGC;
+        }
 
-        /*
-	    cout << "\t" << __FILE__  << "\tREAL i: "<<index.i << endl;
-	    cout << "\t" << __FILE__  << "\tREAL j: "<<index.j << endl;
-	    cout << "\t" << __FILE__  << "\tREAL r: "<< p0.r << endl;
-	    cout << "\t" << __FILE__  << "\tREAL z: "<< p0.z << endl;
-        */
+        REAL bmag = bilinear_interp ( index, textures.bmag );
 
-        err++;
-        return vGC;
-    }
+        REAL b_r = bilinear_interp ( index, textures.b_r );
+        REAL b_p = bilinear_interp ( index, textures.b_p );
+        REAL b_z = bilinear_interp ( index, textures.b_z );
 
-    REAL bmag = bilinear_interp ( index, textures.bmag );
+        REAL bCurv_r = bilinear_interp ( index, textures.bCurv_r );
+        REAL bCurv_p = bilinear_interp ( index, textures.bCurv_p );
+        REAL bCurv_z = bilinear_interp ( index, textures.bCurv_z );
 
-    REAL b_r = bilinear_interp ( index, textures.b_r );
-    REAL b_p = bilinear_interp ( index, textures.b_p );
-    REAL b_z = bilinear_interp ( index, textures.b_z );
+        REAL bGrad_r = bilinear_interp ( index, textures.bGrad_r );
+        REAL bGrad_p = bilinear_interp ( index, textures.bGrad_p );
+        REAL bGrad_z = bilinear_interp ( index, textures.bGrad_z );
 
-    REAL bCurv_r = bilinear_interp ( index, textures.bCurv_r );
-    REAL bCurv_p = bilinear_interp ( index, textures.bCurv_p );
-    REAL bCurv_z = bilinear_interp ( index, textures.bCurv_z );
+        REAL bDotGradB = bilinear_interp ( index, textures.bDotGradB );
 
-    REAL bGrad_r = bilinear_interp ( index, textures.bGrad_r );
-    REAL bGrad_p = bilinear_interp ( index, textures.bGrad_p );
-    REAL bGrad_z = bilinear_interp ( index, textures.bGrad_z );
+	    REAL unitb_r = b_r / bmag;
+	    REAL unitb_p = b_p / bmag;
+	    REAL unitb_z = b_z / bmag;
 
-    REAL bDotGradB = bilinear_interp ( index, textures.bDotGradB );
+	    // vPer
+	    REAL vPer = sqrtf ( 2.0 * mu * bmag / _mi );
+	    // dvPar_dt
+	    REAL dvPar_dt = -mu / _mi * bDotGradB;
+	    // Here vGC is a dvGC and so vGC.vPar is really a dvPar.
+	    // I'm just using the Crk class as containers for x/dx and v/dv quantities.
+	    vGC.vPar = dvPar_dt; 
+	    REAL vPar = p0.vPar;
 
-	REAL unitb_r = b_r / bmag;
-	REAL unitb_p = b_p / bmag;
-	REAL unitb_z = b_z / bmag;
+	    // vGC
+	    vGC.r = vPar * unitb_r + pow(vPer,2) * bGrad_r + pow(vPar,2) * bCurv_r;
+	    vGC.p = vPar * unitb_p + pow(vPer,2) * bGrad_p + pow(vPar,2) * bCurv_p;
+	    vGC.z = vPar * unitb_z + pow(vPer,2) * bGrad_z + pow(vPar,2) * bCurv_z;
 
-	// vPer
-	REAL vPer = sqrtf ( 2.0 * mu * bmag / _mi );
-	// dvPar_dt
-	REAL dvPar_dt = -mu / _mi * bDotGradB;
-	// Here vGC is a dvGC and so vGC.vPar is really a dvPar.
-	// I'm just using the Crk class as containers for x/dx and v/dv quantities.
-	vGC.vPar = dvPar_dt; 
-	REAL vPar = p0.vPar;
-
-	// vGC
-	vGC.r = vPar * unitb_r + pow(vPer,2) * bGrad_r + pow(vPar,2) * bCurv_r;
-	vGC.p = vPar * unitb_p + pow(vPer,2) * bGrad_p + pow(vPar,2) * bCurv_p;
-	vGC.z = vPar * unitb_z + pow(vPer,2) * bGrad_z + pow(vPar,2) * bCurv_z;
+    } // End if(!err) 
 
 	return vGC;
 }
