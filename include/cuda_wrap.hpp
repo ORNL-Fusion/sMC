@@ -5,12 +5,14 @@
 #include "constants.hpp"
 #include "eqdsk.hpp"
 #include <vector>
-#include "array2d.hpp"
+#include "array2D.hpp"
 #include "interp.hpp"
 #include "cuda_classes.hpp"
 
-Ccu_ptr_pitch copy_2D_to_device ( const array2D<REAL,BCHECK> &data2D, 
-    const unsigned int nRow, const unsigned int nCol );
+//Ccu_ptr_pitch copy_2D_to_device ( const array2D<REAL,BCHECK> &data2D, 
+//    const unsigned int nRow, const unsigned int nCol );
+void copy_2D_to_device ( const array2D<REAL,BCHECK> &h_data2D, 
+				array2D<REAL,BCHECK> &d_data2D);
 
 REAL* copy_1D_to_device ( const std::vector<REAL> &h_data1D, const unsigned int n );
 

@@ -19,6 +19,16 @@ class Crk {
 #endif
 			Crk () {r=0.0;p=0.0;z=0.0;vPar=0.0;}; 
 
+#ifdef __CUDACC__
+		__host__ __device__
+#endif
+			Crk (const REAL r_, const REAL p_, const REAL z_, const REAL vPar_) {
+					r=r_;
+					p=p_;
+					z=z_;
+					vPar=vPar_;
+			}; 
+
 		// Copy constructor
 #ifdef __CUDACC__
 		__host__ __device__

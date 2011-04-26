@@ -10,56 +10,42 @@
 #include "interp.hpp"
 #include <vector>
 #include "particle.hpp"
-#include "cuPrintf.cu"
+#include "C/src/simplePrintf/cuPrintf.cu"
+#include "C/common/inc/cutil.h"
+#include <ctime>
+
+#define NTHREADS 256 
+#define NTHREADBLOCKS 32 
 
 __global__ void cu_move_particles (Cgc_particle *const particles, 
-                    const Ccu_ptrs dataPtrs, const CinterpSpans spans) {
+                    Ctextures *const textures, const CinterpSpans spans, const unsigned int nP) {
 
-    if(dataPtrs.isValid()) {
+	unsigned int my_idx = blockDim.x * blockIdx.x + threadIdx.x;
+	//unsigned int my_nP = nP / ( NTHREADS * NTHREADBLOCKS );
+	//unsigned int leftOver = nP - my_nP * NTHREADS * NTHREADBLOCKS;
+	//if(my_idx<leftOver)
+	//		my_nP++;
 
-        Ctextures textures;
-
-        textures.bmag.ptr = dataPtrs.bmag.ptr;
-        textures.bmag.pitch = dataPtrs.bmag.pitch;
-
-        textures.bDotGradB.ptr   = dataPtrs.bDotGradB.ptr;
-        textures.bDotGradB.pitch = dataPtrs.bDotGradB.pitch;
-
-        textures.bCurv_r.ptr     = dataPtrs.bCurv_r.ptr;
-        textures.bCurv_r.pitch   = dataPtrs.bCurv_r.pitch;
-        textures.bCurv_p.ptr     = dataPtrs.bCurv_p.ptr;
-        textures.bCurv_p.pitch   = dataPtrs.bCurv_p.pitch;
-        textures.bCurv_z.ptr     = dataPtrs.bCurv_z.ptr;
-        textures.bCurv_z.pitch   = dataPtrs.bCurv_z.pitch;
-
-        textures.bGrad_r.ptr     = dataPtrs.bGrad_r.ptr;
-        textures.bGrad_r.pitch   = dataPtrs.bGrad_r.pitch;
-        textures.bGrad_p.ptr     = dataPtrs.bGrad_p.ptr;
-        textures.bGrad_p.pitch   = dataPtrs.bGrad_p.pitch;
-        textures.bGrad_z.ptr     = dataPtrs.bGrad_z.ptr;
-        textures.bGrad_z.pitch   = dataPtrs.bGrad_z.pitch;
-
-        textures.b_r.ptr     = dataPtrs.b_r.ptr;
-        textures.b_r.pitch   = dataPtrs.b_r.pitch;
-        textures.b_p.ptr     = dataPtrs.b_p.ptr;
-        textures.b_p.pitch   = dataPtrs.b_p.pitch;
-        textures.b_z.ptr     = dataPtrs.b_z.ptr;
-        textures.b_z.pitch   = dataPtrs.b_z.pitch;
+    if(textures[0].isValid()) {
 
         int stat;
-	    for(unsigned int p=0;p<5;p++) {
+	    for(unsigned int p=my_idx;p<nP;p+=NTHREADS*NTHREADBLOCKS) {
 
 	    	if(!particles[p].status) {
 
 	    		cuPrintf("Particle No. %i\n",p) ;
-	    		cuPrintf("eV: %f\n",particles[p].energy_eV);
+				//cuPrintf("eV: %f\n",particles[p].energy_eV);
+	    		//cuPrintf("mu: %e\n",particles[p].mu);
+	    		//cuPrintf("r: %f\n",particles[p].r);
+	    		//cuPrintf("p: %f\n",particles[p].p);
+	    		//cuPrintf("z: %f\n",particles[p].z);
 
-                stat = move_particle ( particles[p], textures, spans, p );
+                stat = move_particle ( particles[p], textures[0], spans, p );
 	    		
 	    	} // end if(!particle[p].status)
 	    } // end for(p)
 
-    } // end if(dataPtrs.isValid()) == true
+    } 
     else {
 
         cuPrintf("ERROR: dataPtrs not valid");
@@ -67,19 +53,15 @@ __global__ void cu_move_particles (Cgc_particle *const particles,
     } // end if(dataPtrs.isValid()) == false
 }
 
-__global__ void check2Dcpy ( const Ccu_ptr_pitch data_, 
+__global__ void check2Dcpy ( Ctextures *const textures, 
 				const unsigned int nRow, const unsigned int nCol ) {
 
-    array2D<REAL,BCHECK> data2D;
-    data2D.ptr = data_.ptr;
-    data2D.pitch = data_.pitch;
-
 	for (int r=0;r<nRow;++r) {
-			REAL *row = (REAL*)((char*)data_.ptr + r*data_.pitch);
+			REAL *row = (REAL*)((char*)textures[0].bmag.ptr + r*textures[0].bmag.pitch);
 			for (int c=0;c<nCol;++c) {
 					REAL element = row[c];
-                    //cuPrintf("%i %i %f\n", r, c, element);
-                    //cuPrintf("%i %i %f\n", r, c, data2D(r,c));
+                    cuPrintf("%i %i %f\n", r, c, element);
+                    cuPrintf("%i %i %f\n", r, c, textures[0].bmag(r,c));
 			}
 	}
 }
@@ -91,17 +73,17 @@ __global__ void check1Dcpy ( REAL *data1D, const unsigned int n ) {
 	}
 }
 
-Ccu_ptr_pitch copy_2D_to_device
-( const array2D<REAL,BCHECK> &data2D, const unsigned int M, const unsigned int N ) {
+void copy_2D_to_device
+( const array2D<REAL,BCHECK> &h_data2D, array2D<REAL,BCHECK> &d_data2D ) {
 
-    Ccu_ptr_pitch out;
-	size_t size = N * sizeof(REAL);
+	size_t width = h_data2D.N * sizeof(REAL);
+	size_t height = h_data2D.M;
+	size_t spitch = h_data2D.N * sizeof(REAL);
 
-	cudaMallocPitch ( (void**)&out.ptr, &out.pitch, size, M );
-	cudaMemcpy2D ( out.ptr, out.pitch, &data2D(0,0), 
-					size, size, M, cudaMemcpyHostToDevice );
+	cudaMallocPitch ( &d_data2D.ptr, &d_data2D.pitch, width, height );
 
-	return out;
+	cudaMemcpy2D ( d_data2D.ptr, d_data2D.pitch, &h_data2D(0,0), 
+					spitch, width, height, cudaMemcpyHostToDevice );
 }
 
 REAL* copy_1D_to_device 
@@ -131,26 +113,37 @@ int cu_test_cuda
 
     std::cout << "\tCopying textures to device ... ";
 
-    Ccu_ptrs D_ptrs;
+    Ctextures h_d_textures;
 
-	D_ptrs.r = copy_1D_to_device (eqdsk.r,eqdsk.nCol);
-	D_ptrs.z = copy_1D_to_device (eqdsk.z,eqdsk.nRow);
-
-	D_ptrs.bmag = copy_2D_to_device (eqdsk.bmag,eqdsk.nRow,eqdsk.nCol);
+	copy_2D_to_device (eqdsk.bmag,h_d_textures.bmag);
     
-	D_ptrs.b_r = copy_2D_to_device (eqdsk.br,eqdsk.nRow,eqdsk.nCol);
-	D_ptrs.b_p = copy_2D_to_device (eqdsk.bp,eqdsk.nRow,eqdsk.nCol);
-	D_ptrs.b_z = copy_2D_to_device (eqdsk.bz,eqdsk.nRow,eqdsk.nCol);
+	copy_2D_to_device (eqdsk.br,h_d_textures.b_r);
+	copy_2D_to_device (eqdsk.bp,h_d_textures.b_p);
+	copy_2D_to_device (eqdsk.bz,h_d_textures.b_z);
 
-	D_ptrs.bCurv_r = copy_2D_to_device (eqdsk.bCurvature_r,eqdsk.nRow,eqdsk.nCol);
-	D_ptrs.bCurv_p = copy_2D_to_device (eqdsk.bCurvature_p,eqdsk.nRow,eqdsk.nCol);
-	D_ptrs.bCurv_z = copy_2D_to_device (eqdsk.bCurvature_z,eqdsk.nRow,eqdsk.nCol);
+	copy_2D_to_device (eqdsk.bCurvature_r,h_d_textures.bCurv_r);
+	copy_2D_to_device (eqdsk.bCurvature_p,h_d_textures.bCurv_p);
+	copy_2D_to_device (eqdsk.bCurvature_z,h_d_textures.bCurv_z);
 
-	D_ptrs.bGrad_r = copy_2D_to_device (eqdsk.bGradient_r,eqdsk.nRow,eqdsk.nCol);
-	D_ptrs.bGrad_p = copy_2D_to_device (eqdsk.bGradient_p,eqdsk.nRow,eqdsk.nCol);
-	D_ptrs.bGrad_z = copy_2D_to_device (eqdsk.bGradient_z,eqdsk.nRow,eqdsk.nCol);
+	copy_2D_to_device (eqdsk.bGradient_r,h_d_textures.bGrad_r);
+	copy_2D_to_device (eqdsk.bGradient_p,h_d_textures.bGrad_p);
+	copy_2D_to_device (eqdsk.bGradient_z,h_d_textures.bGrad_z);
 
-	D_ptrs.bDotGradB = copy_2D_to_device (eqdsk.bDotGradB,eqdsk.nRow,eqdsk.nCol);
+	copy_2D_to_device (eqdsk.bDotGradB,h_d_textures.bDotGradB);
+
+	if(h_d_textures.isValid()) {
+		std::cout << "\tTextures are valid :)" << std::endl;
+		std::cout << "\tWith pitch of: " << h_d_textures.bmag.pitch << std::endl;
+	}
+	else 
+		std::cout << "\tTextures are NOT valid :)" << std::endl;
+
+
+	Ctextures *d_textures;
+	size_t size = sizeof(Ctextures);
+	cudaMalloc ( (void**)&d_textures, size );
+	cudaMemcpy ( d_textures, &h_d_textures, size, cudaMemcpyHostToDevice);
+
     std::cout << "DONE" << std::endl;
 
     cudaPrintfInit();
@@ -158,13 +151,25 @@ int cu_test_cuda
     //std::cout << "Testing 1D memcopy ..." << std::endl;
 	//check1Dcpy<<<1,1>>>( D_ptrs.z, nRow );
     //std::cout << "Testing 2D memcopy ..." << std::endl;
-	//check2Dcpy<<<1,1>>>( D_ptrs.bmag, nRow, nCol );
+	//check2Dcpy<<<1,1>>>( d_textures, nRow, nCol );
 
     std::cout << "Moving particles ..." << std::endl;
-	cu_move_particles<<<1,1>>>( D_particles_ptr, D_ptrs, spans );
+	time_t startTime, endTime;
+	startTime = time ( NULL );
+
+	unsigned int nP;
+	nP = H_particles.size();
+	nP = 128;
+	cu_move_particles<<<NTHREADBLOCKS,NTHREADS>>>
+			( D_particles_ptr, d_textures, spans, nP);
+
+	CUT_CHECK_ERROR("cu_move_particles kernel failure");
 
     cudaPrintfDisplay (stdout, true);
     cudaPrintfEnd();
+
+	endTime = time ( NULL );
+	std::cout << "CUDA Run took: " << difftime ( endTime, startTime ) << std::endl;
 
     return 0;
 }

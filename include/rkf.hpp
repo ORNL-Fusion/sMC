@@ -12,7 +12,7 @@
 #include "constants.hpp"
 
 #ifdef __CUDA_ARCH__
-#include "cuPrintf.cu"
+#include "C/src/simplePrintf/cuPrintf.cu"
 #endif
 
 #define __SAVE_ORBITS__
@@ -39,22 +39,29 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	REAL EPS = 1e-3;
 	unsigned int FLAG = 1;
 
-	Crk K1, K2, K3, K4, K5, K6, w, R;
+	Crk K1, K2, K3, K4, K5, K6, R;
 
 	dt = dtMin;
 
-    /*
-	FLAG = 1;
-    ii = 0;
-    err = 0;
-    t = 0.0;
-    */ 
-
 	// Initial position w
-	w.r = p.r;
-	w.p = p.p;
-	w.z = p.z;
-	w.vPar = p.vPar;
+	Crk w(p.r,p.p,p.z,p.vPar);
+
+//#ifdef __CUDA_ARCH__
+//	cuPrintf("move_particle eV: %f\n",p.energy_eV);
+//	cuPrintf("move_particle r: %f\n",p.r);
+//	cuPrintf("move_particle p: %f\n",p.p);
+//	cuPrintf("move_particle z: %f\n",p.z);
+//	cuPrintf("move_particle vPar: %f\n",p.vPar);
+//
+//	cuPrintf("move_particle r: %f\n",w.r);
+//	cuPrintf("move_particle p: %f\n",w.p);
+//	cuPrintf("move_particle z: %f\n",w.z);
+//	cuPrintf("move_particle vPar: %f\n",w.vPar);
+//
+//	cuPrintf("move_particle spans: %f %f %i %f %f %i\n",
+//					spans.rfront, spans.rback, spans.rsize, 
+//					spans.zfront, spans.zback, spans.zsize);
+//#endif
 
 #ifndef __CUDA_ARCH__
 #ifdef __SAVE_ORBITS__
@@ -93,8 +100,12 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 		if(err) {
 			p.status = err;
+#ifndef __CUDA_ARCH__
+			std::cout << "\tParticle lost." << std::endl;
+#else
+			cuPrintf("\tParticle lost, err = %i\n", err);
+#endif
             return err;
-			//break;
 		}
 
 		R = Kabs ( 1.0/360.0*K1 - 128.0/4275.0*K3 - 2197.0/75240.0*K4 + 1.0/50.0*K5 + 2.0/55.0*K6 ) / dt;
@@ -140,7 +151,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			// Make sure integration ends == runTime
 			dt = runTime - t;
 		}
-		else if(dt<dtMin) {
+		else if(dt<dtMin || dt!=dt) {
 #ifndef __CUDA_ARCH__
 			std::cout << "\tdtMin reached: " << dt <<" "<< dtMin << std::endl;
 			std::cout << "\tdelta: "<<delta<<std::endl;
@@ -169,9 +180,6 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 		zOut.push_back(w.z);
 #endif
 #endif
-    //if(pp==4 && ii>9900)
-    //    return 0; 
-
 
 	} // end while(FLAG=1)
 

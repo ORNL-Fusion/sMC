@@ -8,7 +8,7 @@ NETCDFDIR := /home/dg6/code/netcdf/netcdf_gnu64
 CUDADIR := /home/dg6/code/cuda/4.0/cuda
 CUDALIBDIR = ${CUDADIR}/lib64
 CUDA_ARCH := sm_13
-CUDA_SDK_DIR := /home/dg6/code/cuda/NVIDIA_GPU_Computing_SDK/C/src/simplePrintf
+CUDA_SDK_DIR := /home/dg6/code/cuda/NVIDIA_GPU_Computing_SDK
 
 # Catch for greendl.* (my laptop)
 
@@ -16,11 +16,10 @@ ifeq ($(findstring greendl,$(HOSTNAME_OSX)),greendl)
 GCCDIR := /opt/local/bin
 ALGLIBDIR := /home/dg6/code/alglib/cpp/src
 NETCDFDIR := /opt/local
-BOOSTDIR := /opt/local/include
 CUDADIR := /usr/local/cuda
 CUDALIBDIR := ${CUDADIR}/lib
-CUDA_SDK_DIR := /Developer/GPU\ Computing/C/src/simplePrintf
 CUDA_ARCH := sm_11
+CUDA_SDK_DIR := /Developer/GPU\ Computing
 endif
 
 CC := $(GCCDIR)/gcc
@@ -29,16 +28,14 @@ NVCC := $(CUDADIR)/bin/nvcc
 
 MODULES := src include
 
-INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(BOOSTDIR) -I$(NETCDFDIR)/include
+INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(NETCDFDIR)/include
 CFLAGS := 
-CPPFLAGS := -g
-NVCCFLAGS := -g -G --compiler-bindir $(GCCDIR) -arch $(CUDA_ARCH)
+CPPFLAGS := -std=c99 #-g -pg 
+NVCCFLAGS := --compiler-bindir $(GCCDIR) -arch $(CUDA_ARCH) --ptxas-options=-v #-g -G 
 LFLAGS := -L$(NETCDFDIR)/lib -L$(CUDALIBDIR) 
 LIBS := $(ALGLIBDIR)/*.o -lcuda -lcudart -lnetcdf_c++ -lnetcdf
 
 USECUDA:=true 
-#CPP := $(NVCC)
-#CPPFLAGS := $(NVCCFLAGS)
 
 LINK := $(CPP)
 
@@ -65,6 +62,7 @@ NVCCFLAGS += $(INCLUDEFLAGS)
 SRCTYPES := c cpp 
 ifdef USECUDA
 SRCTYPES += cu
+CPPFLAGS += -DUSECUDA
 endif
 OBJ := $(foreach srctype, $(SRCTYPES), $(patsubst %.$(srctype), obj/%.o, $(wildcard $(patsubst %, %/*.$(srctype), $(MODULES)))))
 

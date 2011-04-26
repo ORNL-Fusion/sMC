@@ -30,6 +30,8 @@ class array2D {
         }
         // copy constructor
         array2D(const array2D &source) {
+			pitch = 0;
+			ptr = NULL;
             *this = source;
         }
 
@@ -52,7 +54,6 @@ class array2D {
             resize ( source.M, source.N );
             // copy data pointer to
             memcpy ( ptr, source.ptr, source.M * source.N * sizeof(T) );
-            // not sure i understant this?
             return *this;
         }
 
@@ -75,24 +76,8 @@ class array2D {
 
             return ptr[n + N * m];
 #else
-            unsigned int m_, n_;
-
-            if(m>=M) {
-                m_ = M-1;
-            }
-            else {
-                m_ = m;
-            }
-
-            if(n>=N) {
-                n_ = N-1;
-            }
-            else {
-                n_ = n;
-            }
-
-			T *row = (T*)( (char*)ptr + m_ * pitch);
-            return row[n_];
+			T *row = (T*)( (char*)ptr + pitch * m);
+            return row[n];
 #endif
         } 
 

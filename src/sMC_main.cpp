@@ -7,7 +7,6 @@
 #include <ctime>
 #include "interp.hpp"
 #include "rkf.hpp"
-
 #include "cuda_wrap.hpp"
 
 using namespace std;
@@ -32,8 +31,8 @@ int main ()
 	stat = eqdsk.bForceTerms ( _Z, amu );
 
     // Create the interpSpans container
-    CinterpSpans spans (eqdsk.r.front(), eqdsk.r.back(), eqdsk.r.size(), 
-            eqdsk.z.front(), eqdsk.z.back(), eqdsk.z.size() );
+    CinterpSpans spans (eqdsk.z.front(), eqdsk.z.back(), eqdsk.z.size(), 
+            eqdsk.r.front(), eqdsk.r.back(), eqdsk.r.size() );
 
     // Create the textures container
     Ctextures textures;
@@ -62,7 +61,7 @@ int main ()
 	CinterpIndex index;
 	REAL bmag_p;
 	for(unsigned int p=0;p<particles.size();p++){
-		index = get_index ( particles[p].r, particles[p].z, spans );
+		index = get_index ( particles[p].z, particles[p].r, spans );
 		bmag_p = bilinear_interp ( index, eqdsk.bmag );
 		particles[p].mu = ( amu * _mi ) * pow(particles[p].vPer,2) / ( 2.0 * bmag_p );
 		particles[p].energy_eV = 0.5 * ( amu * _mi ) * 
@@ -73,7 +72,7 @@ int main ()
 	time_t startTime, endTime;
 	startTime = time ( NULL );
 
-	for(unsigned int p=0;p<10;p++) {
+	for(unsigned int p=0;p<128;p++) {
 
 		if(!particles[p].status) {
 
@@ -89,11 +88,12 @@ int main ()
 
 	cout << "Run took: " << difftime ( endTime, startTime ) << endl;
 
+#ifdef USECUDA
     cout << "*** CUDA ***" << endl;
 
     stat = cu_test_cuda ( particles, eqdsk.nRow, eqdsk.nCol, spans, eqdsk );
 
 	cout << "End of program :)" << endl;
-
+#endif
 	return 0;
 }

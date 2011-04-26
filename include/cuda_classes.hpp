@@ -24,43 +24,43 @@ class Ccu_ptrs {
 
         Ccu_ptrs(): r(NULL), z(NULL) {};
 
-#ifdef __CUDACC__
-        __host__ __device__
-#endif
-        bool isValid() const {
-       
-            bool err = true; 
-
-            if(!bmag.ptr || bmag.pitch<=1) 
-                err = false;
-
-            if(!b_r.ptr || b_r.pitch<=1) 
-                err = false;
-            if(!b_p.ptr || b_p.pitch<=1) 
-                err = false;
-            if(!b_z.ptr || b_z.pitch<=1) 
-                err = false;
-
-            if(!bCurv_r.ptr || bCurv_r.pitch<=1) 
-                err = false;
-            if(!bCurv_p.ptr || bCurv_p.pitch<=1) 
-                err = false;
-            if(!bCurv_z.ptr || bCurv_z.pitch<=1) 
-                err = false;
-
-            if(!bGrad_r.ptr || bGrad_r.pitch<=1) 
-                err = false;
-            if(!bGrad_p.ptr || bGrad_p.pitch<=1) 
-                err = false;
-            if(!bGrad_z.ptr || bGrad_z.pitch<=1) 
-                err = false;
-
-            if(!bDotGradB.ptr || bDotGradB.pitch<=1) 
-                err = false;
-
-            return err;
-
-        }
+//#ifdef __CUDACC__
+//        __host__ __device__
+//#endif
+//        bool isValid() const {
+//       
+//            bool err = true; 
+//
+//            if(!bmag.ptr || bmag.pitch<=1) 
+//                err = false;
+//
+//            if(!b_r.ptr || b_r.pitch<=1) 
+//                err = false;
+//            if(!b_p.ptr || b_p.pitch<=1) 
+//                err = false;
+//            if(!b_z.ptr || b_z.pitch<=1) 
+//                err = false;
+//
+//            if(!bCurv_r.ptr || bCurv_r.pitch<=1) 
+//                err = false;
+//            if(!bCurv_p.ptr || bCurv_p.pitch<=1) 
+//                err = false;
+//            if(!bCurv_z.ptr || bCurv_z.pitch<=1) 
+//                err = false;
+//
+//            if(!bGrad_r.ptr || bGrad_r.pitch<=1) 
+//                err = false;
+//            if(!bGrad_p.ptr || bGrad_p.pitch<=1) 
+//                err = false;
+//            if(!bGrad_z.ptr || bGrad_z.pitch<=1) 
+//                err = false;
+//
+//            if(!bDotGradB.ptr || bDotGradB.pitch<=1) 
+//                err = false;
+//
+//            return err;
+//
+//        }
 };
 
 #endif
