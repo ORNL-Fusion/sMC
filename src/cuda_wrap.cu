@@ -11,20 +11,18 @@
 #include <vector>
 #include "particle.hpp"
 #include "C/src/simplePrintf/cuPrintf.cu"
-#include "C/common/inc/cutil.h"
+#include <cutil_inline.h>
 #include <ctime>
 
-#define NTHREADS 256 
-#define NTHREADBLOCKS 32 
+#define NTHREADS 1 
+#define NTHREADBLOCKS 1
+
+texture<float,cudaTextureType2D,cudaReadModeElementType> texRef_bmag;
 
 __global__ void cu_move_particles (Cgc_particle *const particles, 
                     Ctextures *const textures, const CinterpSpans spans, const unsigned int nP) {
 
 	unsigned int my_idx = blockDim.x * blockIdx.x + threadIdx.x;
-	//unsigned int my_nP = nP / ( NTHREADS * NTHREADBLOCKS );
-	//unsigned int leftOver = nP - my_nP * NTHREADS * NTHREADBLOCKS;
-	//if(my_idx<leftOver)
-	//		my_nP++;
 
     if(textures[0].isValid()) {
 
@@ -34,11 +32,11 @@ __global__ void cu_move_particles (Cgc_particle *const particles,
 	    	if(!particles[p].status) {
 
 	    		cuPrintf("Particle No. %i\n",p) ;
-				//cuPrintf("eV: %f\n",particles[p].energy_eV);
-	    		//cuPrintf("mu: %e\n",particles[p].mu);
-	    		//cuPrintf("r: %f\n",particles[p].r);
-	    		//cuPrintf("p: %f\n",particles[p].p);
-	    		//cuPrintf("z: %f\n",particles[p].z);
+				cuPrintf("eV: %f\n",particles[p].energy_eV);
+	    		cuPrintf("mu: %e\n",particles[p].mu);
+	    		cuPrintf("r: %f\n",particles[p].r);
+	    		cuPrintf("p: %f\n",particles[p].p);
+	    		cuPrintf("z: %f\n",particles[p].z);
 
                 stat = move_particle ( particles[p], textures[0], spans, p );
 	    		
@@ -53,15 +51,25 @@ __global__ void cu_move_particles (Cgc_particle *const particles,
     } // end if(dataPtrs.isValid()) == false
 }
 
+__global__ void checkTextures ( Ctextures *const textures ) {
+
+	unsigned int my_idx = blockDim.x * blockIdx.x + threadIdx.x;
+	cuPrintf("%f\n", textures[0].bmag(my_idx,0));
+	cuPrintf("%f\n", tex2D(texRef_bmag,(float)my_idx,0.0));
+
+}
+
 __global__ void check2Dcpy ( Ctextures *const textures, 
 				const unsigned int nRow, const unsigned int nCol ) {
 
-	for (int r=0;r<nRow;++r) {
-			REAL *row = (REAL*)((char*)textures[0].bmag.ptr + r*textures[0].bmag.pitch);
-			for (int c=0;c<nCol;++c) {
+	for (int r=0;r<10;++r) {
+			REAL *row = (REAL*)((char*)textures[0].bmag.ptr 
+							+ r*textures[0].bmag.pitchBytes);
+			for (int c=0;c<10;++c) {
 					REAL element = row[c];
                     cuPrintf("%i %i %f\n", r, c, element);
                     cuPrintf("%i %i %f\n", r, c, textures[0].bmag(r,c));
+                    cuPrintf("%i %i %f\n", r, c, tex2D(texRef_bmag,r+0.5f,c+0.5f));
 			}
 	}
 }
@@ -78,12 +86,14 @@ void copy_2D_to_device
 
 	size_t width = h_data2D.N * sizeof(REAL);
 	size_t height = h_data2D.M;
-	size_t spitch = h_data2D.N * sizeof(REAL);
+	size_t spitchBytes = h_data2D.N * sizeof(REAL);
 
-	cudaMallocPitch ( &d_data2D.ptr, &d_data2D.pitch, width, height );
+	CUDA_SAFE_CALL(
+		cudaMallocPitch(&d_data2D.ptr, &d_data2D.pitchBytes, width, height));
 
-	cudaMemcpy2D ( d_data2D.ptr, d_data2D.pitch, &h_data2D(0,0), 
-					spitch, width, height, cudaMemcpyHostToDevice );
+	CUT_CHECK_ERROR(
+		cudaMemcpy2D ( d_data2D.ptr, d_data2D.pitchBytes, &h_data2D(0,0), 
+					spitchBytes, width, height, cudaMemcpyHostToDevice ));
 }
 
 REAL* copy_1D_to_device 
@@ -116,7 +126,21 @@ int cu_test_cuda
     Ctextures h_d_textures;
 
 	copy_2D_to_device (eqdsk.bmag,h_d_textures.bmag);
-    
+
+  	texRef_bmag.normalized = 0;
+  	texRef_bmag.filterMode = cudaFilterModePoint;
+  	texRef_bmag.addressMode[0] = cudaAddressModeWrap;
+  	texRef_bmag.addressMode[1] = cudaAddressModeWrap;
+
+	size_t offset = 0;
+	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>();
+  	CUT_CHECK_ERROR(
+		cudaBindTexture2D(&offset, &texRef_bmag, 
+			h_d_textures.bmag.ptr, 
+			&channelDesc, 
+			h_d_textures.bmag.N, h_d_textures.bmag.M, 
+			h_d_textures.bmag.pitchBytes));
+
 	copy_2D_to_device (eqdsk.br,h_d_textures.b_r);
 	copy_2D_to_device (eqdsk.bp,h_d_textures.b_p);
 	copy_2D_to_device (eqdsk.bz,h_d_textures.b_z);
@@ -131,27 +155,28 @@ int cu_test_cuda
 
 	copy_2D_to_device (eqdsk.bDotGradB,h_d_textures.bDotGradB);
 
+    std::cout << "DONE" << std::endl;
+
 	if(h_d_textures.isValid()) {
 		std::cout << "\tTextures are valid :)" << std::endl;
-		std::cout << "\tWith pitch of: " << h_d_textures.bmag.pitch << std::endl;
+		std::cout << "\tWith pitchBytes of: " << h_d_textures.bmag.pitchBytes << std::endl;
 	}
 	else 
 		std::cout << "\tTextures are NOT valid :)" << std::endl;
-
 
 	Ctextures *d_textures;
 	size_t size = sizeof(Ctextures);
 	cudaMalloc ( (void**)&d_textures, size );
 	cudaMemcpy ( d_textures, &h_d_textures, size, cudaMemcpyHostToDevice);
 
-    std::cout << "DONE" << std::endl;
-
     cudaPrintfInit();
 
     //std::cout << "Testing 1D memcopy ..." << std::endl;
 	//check1Dcpy<<<1,1>>>( D_ptrs.z, nRow );
-    //std::cout << "Testing 2D memcopy ..." << std::endl;
-	//check2Dcpy<<<1,1>>>( d_textures, nRow, nCol );
+    std::cout << "Testing 2D memcopy ..." << std::endl;
+	check2Dcpy<<<1,1>>>( d_textures, nRow, nCol );
+    //std::cout << "Testing textures ..." << std::endl;
+	//checkTextures<<<1,nRow>>>( d_textures );
 
     std::cout << "Moving particles ..." << std::endl;
 	time_t startTime, endTime;
@@ -159,7 +184,7 @@ int cu_test_cuda
 
 	unsigned int nP;
 	nP = H_particles.size();
-	nP = 128;
+	nP = 8;
 	cu_move_particles<<<NTHREADBLOCKS,NTHREADS>>>
 			( D_particles_ptr, d_textures, spans, nP);
 

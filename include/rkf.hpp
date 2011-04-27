@@ -70,13 +70,23 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	std::vector<REAL> zOut(1,p.z);	
 #endif
 #endif
-   
+
 	while(FLAG==1) {
 
 		// Given a position, mu and vPar calculate vGC
 		K1 = dt * vGC ( 0.0, 
 				w, 
 				p.mu, textures, spans, err );
+
+		if(!K1.isValid()) {
+			err++;
+#ifndef __CUDA_ARCH__
+			std::cout << "\tK1 not valid" << std::endl;
+#else
+			cuPrintf("\tK1 not valid\n");
+#endif
+			return err;
+		}	
 
 		K2 = dt * vGC ( 1.0/4.0 * dt, 
 				w + K1 * 1.0/4.0, 

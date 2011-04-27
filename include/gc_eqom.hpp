@@ -27,17 +27,17 @@ class Ctextures {
        
             bool err = true; 
 
-            if(!bmag.ptr || bmag.pitch<=1) { 
+            if(!bmag.ptr || bmag.pitchBytes<=1) { 
 #ifndef __CUDA_ARCH__
 				std::cout << "bmag NOT valid" << std::endl;
-				std::cout << bmag.ptr << "  " << bmag.pitch << std::endl;
+				std::cout << bmag.ptr << "  " << bmag.pitchBytes << std::endl;
 #else
 				cuPrintf("bmag NOT valid\n");
 #endif
                 err = false;
 			}
 
-            if(!b_r.ptr || b_r.pitch<=1) {
+            if(!b_r.ptr || b_r.pitchBytes<=1) {
 #ifndef __CUDA_ARCH__
 				std::cout << "b_r NOT valid" << std::endl;
 #else
@@ -45,26 +45,26 @@ class Ctextures {
 #endif
                 err = false;
 			}
-            if(!b_p.ptr || b_p.pitch<=1) 
+            if(!b_p.ptr || b_p.pitchBytes<=1) 
                 err = false;
-            if(!b_z.ptr || b_z.pitch<=1) 
-                err = false;
-
-            if(!bCurv_r.ptr || bCurv_r.pitch<=1) 
-                err = false;
-            if(!bCurv_p.ptr || bCurv_p.pitch<=1) 
-                err = false;
-            if(!bCurv_z.ptr || bCurv_z.pitch<=1) 
+            if(!b_z.ptr || b_z.pitchBytes<=1) 
                 err = false;
 
-            if(!bGrad_r.ptr || bGrad_r.pitch<=1) 
+            if(!bCurv_r.ptr || bCurv_r.pitchBytes<=1) 
                 err = false;
-            if(!bGrad_p.ptr || bGrad_p.pitch<=1) 
+            if(!bCurv_p.ptr || bCurv_p.pitchBytes<=1) 
                 err = false;
-            if(!bGrad_z.ptr || bGrad_z.pitch<=1) 
+            if(!bCurv_z.ptr || bCurv_z.pitchBytes<=1) 
                 err = false;
 
-            if(!bDotGradB.ptr || bDotGradB.pitch<=1) 
+            if(!bGrad_r.ptr || bGrad_r.pitchBytes<=1) 
+                err = false;
+            if(!bGrad_p.ptr || bGrad_p.pitchBytes<=1) 
+                err = false;
+            if(!bGrad_z.ptr || bGrad_z.pitchBytes<=1) 
+                err = false;
+
+            if(!bDotGradB.ptr || bDotGradB.pitchBytes<=1) 
                 err = false;
 
             return err;
@@ -96,13 +96,25 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 #else
 			cuPrintf("get_index() result off grid: %i %i %i %i %f %f\n", 
 							index.m1, index.m2, index.n1, index.n2, index.m, index.n);
-			cuPrintf("\t p.r: %f, p.z: %f\n",p.r,p.z);
+			cuPrintf("p.r: %f, p.z: %f\n",p.r,p.z);
+			cuPrintf("spans.mfront: %f, spans.mback: %f, spans.nfront: %f, spans.nback %f, spans.NROW: %i, spans.NCOL: %i\n", 
+							spans.mfront, spans.mback, spans.nfront, spans.nback, 
+							spans.NROW, spans.NCOL);
 #endif
             return vGC;
         }
+		else {
+#ifdef __CUDA_ARCH__
+			cuPrintf("get_index() GOOD: %i %i %i %i %f %f\n", 
+							index.m1, index.m2, index.n1, index.n2, index.m, index.n);
+#endif
+		}
 
         REAL bmag = bilinear_interp ( index, textures.bmag );
-
+#ifdef __CUDA_ARCH__
+			cuPrintf("bmag: %f\n", bmag);
+#endif
+	
         REAL b_r = bilinear_interp ( index, textures.b_r );
         REAL b_p = bilinear_interp ( index, textures.b_p );
         REAL b_z = bilinear_interp ( index, textures.b_z );

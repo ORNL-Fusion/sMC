@@ -81,6 +81,10 @@ class Crk {
 	   	__host__ __device__
 #endif
 			friend REAL Kmax(const Crk &K);
+#ifdef __CUDACC__
+	   	__host__ __device__
+#endif
+			bool isValid();
 };
 
 
@@ -197,6 +201,18 @@ REAL Kmax (const Crk &K) {
 	if(K.p>maxVal) maxVal = K.p;
 	if(K.z>maxVal) maxVal = K.z;
 	return maxVal;
+}
+
+#ifdef __CUDACC__
+__host__ __device__ 
+#endif
+bool Crk::isValid () {
+	bool good = true;
+	if(r!=r) good = false;
+	if(p!=p) good = false;
+	if(z!=z) good = false;
+	if(vPar!=vPar) good = false;
+	return good;
 }
 
 } // end namespace

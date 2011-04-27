@@ -22,22 +22,24 @@ CUDA_ARCH := sm_11
 CUDA_SDK_DIR := /Developer/GPU\ Computing
 endif
 
+CUDA_SDK_INC := $(CUDA_SDK_DIR)/C/common/inc
+
 CC := $(GCCDIR)/gcc
 CPP := $(GCCDIR)/g++
 NVCC := $(CUDADIR)/bin/nvcc
 
 MODULES := src include
 
-INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(NETCDFDIR)/include
+INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(NETCDFDIR)/include -I$(CUDA_SDK_INC)
 CFLAGS := 
-CPPFLAGS := -std=c99 #-g -pg 
+CPPFLAGS := -g -pg 
 NVCCFLAGS := --compiler-bindir $(GCCDIR) -arch $(CUDA_ARCH) --ptxas-options=-v #-g -G 
 LFLAGS := -L$(NETCDFDIR)/lib -L$(CUDALIBDIR) 
 LIBS := $(ALGLIBDIR)/*.o -lcuda -lcudart -lnetcdf_c++ -lnetcdf
 
 USECUDA:=true 
 
-LINK := $(CPP)
+LINK := $(CPP) -pg
 
 # You shouldn't have to go below here
 #

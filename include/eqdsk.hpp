@@ -42,7 +42,7 @@ class Ceqdsk {
 			    bGradient_r, bGradient_p, bGradient_z;
 
 		// Default constructor
-		Ceqdsk () {}; 
+		Ceqdsk () { nRow=0; nCol=0;}; 
 
 		// Copy constructor
 		Ceqdsk ( const Ceqdsk &eqdsk ) {*this = eqdsk;}	

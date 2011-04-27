@@ -18,19 +18,19 @@ class array2D {
  
         T *ptr;
         unsigned int M, N;
-        size_t pitch;
+        size_t pitchBytes;
 
         // Constructors
 #ifdef __CUDACC__
         __host__ __device__
 #endif
-        array2D(): M(0), N(0), ptr(NULL), pitch(0) {};
-        array2D(const unsigned int _M, const unsigned int _N) : ptr(NULL), pitch(0) {
+        array2D(): M(0), N(0), ptr(NULL), pitchBytes(0) {};
+        array2D(const unsigned int _M, const unsigned int _N) : ptr(NULL), pitchBytes(0) {
            resize(_M,_N); 
         }
         // copy constructor
         array2D(const array2D &source) {
-			pitch = 0;
+			pitchBytes = 0;
 			ptr = NULL;
             *this = source;
         }
@@ -38,7 +38,7 @@ class array2D {
         // conversion constructor 
         template<class T2>
         array2D(const array2D<T2,boundscheck>&source) {
-            pitch = 0;
+            pitchBytes = 0;
             ptr = NULL;
             resize(source.M,source.N);
             for(size_t n=0;n<N;++n) {
@@ -60,7 +60,7 @@ class array2D {
         // cuda assignment 
         array2D &operator<<(const array2D &source) {
             this->ptr = source.ptr;
-            this->pitch = source.pitch;
+            this->pitchBytes = source.pitchBytes;
             return *this;
         }
 
@@ -76,7 +76,7 @@ class array2D {
 
             return ptr[n + N * m];
 #else
-			T *row = (T*)( (char*)ptr + pitch * m);
+			T *row = (T*)( (char*)ptr + pitchBytes * m);
             return row[n];
 #endif
         } 

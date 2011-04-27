@@ -372,58 +372,58 @@ int Ceqdsk::bForceTerms ( const int _Z, const int amu ) {
 
 	// do the dr derivatives ...
 
-	std::vector<REAL> tmpIn (nCol);
-	std::vector<REAL> tmpOut (nCol);
+	std::vector<REAL> r_tmpIn (nCol);
+	std::vector<REAL> r_tmpOut (nCol);
 	
 	for(int i=0;i<nRow;i++) {
 
-		for(int j=0;j<nCol;j++) tmpIn[j] = br_B(i,j);
-    	tmpOut = deriv ( tmpIn, dr, 4 );
-		for(int j=0;j<nCol;j++) br_B_dr(i,j) = tmpOut[j];
+		for(int j=0;j<nCol;j++) r_tmpIn[j] = br_B(i,j);
+    	r_tmpOut = deriv ( r_tmpIn, dr, 4 );
+		for(int j=0;j<nCol;j++) br_B_dr(i,j) = r_tmpOut[j];
 
-		for(int j=0;j<nCol;j++) tmpIn[j] = bp_B(i,j);
-    	tmpOut = deriv ( tmpIn, dr, 4 );
-		for(int j=0;j<nCol;j++) bp_B_dr(i,j) = tmpOut[j];
+		for(int j=0;j<nCol;j++) r_tmpIn[j] = bp_B(i,j);
+    	r_tmpOut = deriv ( r_tmpIn, dr, 4 );
+		for(int j=0;j<nCol;j++) bp_B_dr(i,j) = r_tmpOut[j];
 
-		for(int j=0;j<nCol;j++) tmpIn[j] = bz_B(i,j);
-    	tmpOut = deriv ( tmpIn, dr, 4 );
-		for(int j=0;j<nCol;j++) bz_B_dr(i,j) = tmpOut[j];
+		for(int j=0;j<nCol;j++) r_tmpIn[j] = bz_B(i,j);
+    	r_tmpOut = deriv ( r_tmpIn, dr, 4 );
+		for(int j=0;j<nCol;j++) bz_B_dr(i,j) = r_tmpOut[j];
 
-		for(int j=0;j<nCol;j++) tmpIn[j] = bmag(i,j);
-    	tmpOut = deriv ( tmpIn, dr, 4 );
-		for(int j=0;j<nCol;j++) gradB_r(i,j) = tmpOut[j];
+		for(int j=0;j<nCol;j++) r_tmpIn[j] = bmag(i,j);
+    	r_tmpOut = deriv ( r_tmpIn, dr, 4 );
+		for(int j=0;j<nCol;j++) gradB_r(i,j) = r_tmpOut[j];
 
-		for(int j=0;j<nCol;j++) tmpIn[j] = lnB(i,j);
-    	tmpOut = deriv ( tmpIn, dr, 4 );
-		for(int j=0;j<nCol;j++) lnB_dr(i,j) = tmpOut[j];
+		for(int j=0;j<nCol;j++) r_tmpIn[j] = lnB(i,j);
+    	r_tmpOut = deriv ( r_tmpIn, dr, 4 );
+		for(int j=0;j<nCol;j++) lnB_dr(i,j) = r_tmpOut[j];
 	}
 
 	// do the dz derivatives ...
-
-	tmpIn.resize(nRow);
-	tmpOut.resize(nRow);
+	
+	std::vector<REAL> z_tmpIn (nRow);
+	std::vector<REAL> z_tmpOut (nRow);
 	
 	for(int j=0;j<nCol;j++) {
 
-		for(int i=0;i<nRow;i++) tmpIn[i] = br_B(i,j);
-    	tmpOut = deriv ( tmpIn, dz, 4 );
-		for(int i=0;i<nRow;i++) br_B_dz(i,j) = tmpOut[i];
+		for(int i=0;i<nRow;i++) z_tmpIn[i] = br_B(i,j);
+    	z_tmpOut = deriv ( z_tmpIn, dz, 4 );
+		for(int i=0;i<nRow;i++) br_B_dz(i,j) = z_tmpOut[i];
 		
-		for(int i=0;i<nRow;i++) tmpIn[i] = bp_B(i,j);
-    	tmpOut = deriv ( tmpIn, dz, 4 );
-		for(int i=0;i<nRow;i++) bp_B_dz(i,j) = tmpOut[i];
+		for(int i=0;i<nRow;i++) z_tmpIn[i] = bp_B(i,j);
+    	z_tmpOut = deriv ( z_tmpIn, dz, 4 );
+		for(int i=0;i<nRow;i++) bp_B_dz(i,j) = z_tmpOut[i];
 
-		for(int i=0;i<nRow;i++) tmpIn[i] = bz_B(i,j);
-    	tmpOut = deriv ( tmpIn, dz, 4 );
-		for(int i=0;i<nRow;i++) bz_B_dz(i,j) = tmpOut[i];
+		for(int i=0;i<nRow;i++) z_tmpIn[i] = bz_B(i,j);
+    	z_tmpOut = deriv ( z_tmpIn, dz, 4 );
+		for(int i=0;i<nRow;i++) bz_B_dz(i,j) = z_tmpOut[i];
 
-		for(int i=0;i<nRow;i++) tmpIn[i] = bmag(i,j);
-    	tmpOut = deriv ( tmpIn, dz, 4 );
-		for(int i=0;i<nRow;i++) gradB_z(i,j) = tmpOut[i];
+		for(int i=0;i<nRow;i++) z_tmpIn[i] = bmag(i,j);
+    	z_tmpOut = deriv ( z_tmpIn, dz, 4 );
+		for(int i=0;i<nRow;i++) gradB_z(i,j) = z_tmpOut[i];
 
-		for(int i=0;i<nRow;i++) tmpIn[i] = lnB(i,j);
-    	tmpOut = deriv ( tmpIn, dz, 4 );
-		for(int i=0;i<nRow;i++) lnB_dz(i,j) = tmpOut[i];
+		for(int i=0;i<nRow;i++) z_tmpIn[i] = lnB(i,j);
+    	z_tmpOut = deriv ( z_tmpIn, dz, 4 );
+		for(int i=0;i<nRow;i++) lnB_dz(i,j) = z_tmpOut[i];
 	}
 
     array2D<REAL,BCHECK>
