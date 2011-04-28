@@ -1,7 +1,6 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <iostream>
-//#include "eqdsk.hpp"
 #include "constants.hpp"
 #include "cuda_classes.hpp"
 #include "array2D.hpp"
@@ -11,7 +10,6 @@
 #include <vector>
 #include "particle.hpp"
 #include "C/src/simplePrintf/cuPrintf.cu"
-//#include <cutil_inline.h>
 #include <ctime>
 
 #define NTHREADS 1 
@@ -55,7 +53,10 @@ __global__ void checkTextures ( Ctextures *const textures ) {
 
 	unsigned int my_idx = blockDim.x * blockIdx.x + threadIdx.x;
 	cuPrintf("%i %i %f\n", my_idx, 40, textures[0].bmag(my_idx,40));
-	cuPrintf("%i %i %f\n", my_idx, 40, tex2D(texRef_bmag,(float)my_idx,40.0f));
+	float x,y;
+	x = 40;
+	y = my_idx;
+	cuPrintf("%i %i %f\n", my_idx, 40, tex2D(texRef_bmag,x,y) );
 
 }
 
@@ -69,7 +70,10 @@ __global__ void check2Dcpy ( Ctextures *const textures,
 					REAL element = row[c];
                     cuPrintf("%i %i %f\n", r, c, element);
                     cuPrintf("%i %i %f\n", r, c, textures[0].bmag(r,c));
-                    cuPrintf("%i %i %f\n", r, c, tex2D(texRef_bmag,r+0.5f,c+0.5f));
+					float x,y;
+					x = c;
+					y = r;
+                    cuPrintf("%i %i %f\n", r, c, tex2D(texRef_bmag,x,y));
 			}
 	}
 }
@@ -124,19 +128,6 @@ int cu_test_cuda
 
 	copy_2D_to_device (h_textures.bmag,h_d_textures.bmag);
 
-  	texRef_bmag.normalized = 0;
-  	texRef_bmag.filterMode = cudaFilterModePoint;
-  	texRef_bmag.addressMode[0] = cudaAddressModeWrap;
-  	texRef_bmag.addressMode[1] = cudaAddressModeWrap;
-
-	size_t offset = 0;
-	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>();
-	cudaBindTexture2D(&offset, &texRef_bmag, 
-			h_d_textures.bmag.ptr, 
-			&channelDesc, 
-			h_d_textures.bmag.N, h_d_textures.bmag.M, 
-			h_d_textures.bmag.pitchBytes);
-
 	copy_2D_to_device (h_textures.b_r,h_d_textures.b_r);
 	copy_2D_to_device (h_textures.b_p,h_d_textures.b_p);
 	copy_2D_to_device (h_textures.b_z,h_d_textures.b_z);
@@ -165,6 +156,20 @@ int cu_test_cuda
 	cudaMalloc ( (void**)&d_textures, size );
 	cudaMemcpy ( d_textures, &h_d_textures, size, cudaMemcpyHostToDevice);
 
+  	texRef_bmag.normalized = 0;
+  	texRef_bmag.filterMode = cudaFilterModePoint;
+  	texRef_bmag.addressMode[0] = cudaAddressModeClamp;
+  	texRef_bmag.addressMode[1] = cudaAddressModeClamp;
+
+	size_t offset = 0;
+	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>();
+	cudaBindTexture2D(&offset, &texRef_bmag, 
+			h_d_textures.bmag.ptr, 
+			&channelDesc, 
+			h_textures.bmag.N, h_textures.bmag.M, 
+			h_d_textures.bmag.pitchBytes);
+
+
     cudaPrintfInit();
 
     //std::cout << "Testing 1D memcopy ..." << std::endl;
@@ -172,7 +177,7 @@ int cu_test_cuda
     std::cout << "Testing 2D memcopy ..." << std::endl;
 	check2Dcpy<<<1,1>>>( d_textures, nRow, nCol );
     std::cout << "Testing textures ..." << std::endl;
-	checkTextures<<<1,nRow>>>( d_textures );
+	checkTextures<<<1,10>>>( d_textures );
 
     std::cout << "Moving particles ..." << std::endl;
 	time_t startTime, endTime;

@@ -18,7 +18,7 @@ int main ()
 
     int _Z = 1;
     int amu = 1;
-	unsigned int nRow = 32, nCol = 128;
+	unsigned int nRow = 256, nCol = 128;
 
 	string fName = "data/eqdsk";
 	//string fName = "data/g122080.03100";
