@@ -139,15 +139,25 @@ int Ceqdsk::read_file ( string fName ) {
 
 }
 
-// Get the eqdsk b field on a desired grid of nrow x ncol
-int Ceqdsk::calc_b ( const unsigned int nrow, const unsigned int ncol ) {
-		
-	cout << "Calculating b field from eqdsk data ..." << endl;
-
+int Ceqdsk::set_size(const unsigned int _nRow, const unsigned int _nCol) {
 	// Set the public variables
 	
-	nRow = nrow;
-	nCol = ncol;
+	nRow = _nRow;
+	nCol = _nCol;
+
+	return 0;
+}
+
+// Get the eqdsk b field on a desired grid of nrow x ncol
+int Ceqdsk::calc_b () {
+	
+	if(!nRow || !nCol) {
+			std::cout << __FILE__<<__LINE__ << std::endl;
+		   	std::cout << "\tERROR: Please set nRow and nCol using Ceqdsk::set_size(nRow,nCol) first." << std::endl;	
+			return 1;
+	}
+
+	cout << "Calculating b field from eqdsk data ..." << endl;
 
     // Calculate other quantities from read data
 
@@ -179,17 +189,23 @@ int Ceqdsk::calc_b ( const unsigned int nrow, const unsigned int ncol ) {
 	alglib::spline2dinterpolant AG_s2D;
 	alglib::ae_int_t AG_M, AG_N;
 
+#ifdef __REAL_FLT__ 
 	// AGLIB is double only, so copy REAL vectors to double
 	std::vector<double> r_dbl(r_.begin(),r_.end());
 	std::vector<double> z_dbl(z_.begin(),z_.end());
 	array2D<double,BCHECK> psizr_dbl(psizr_);
-	//psizr_dbl = psizr_;
 
 	// Population the ALGLIB arrays
 	AG_r.setcontent(nCol_,&r_dbl[0]);
 	AG_z.setcontent(nRow_,&z_dbl[0]);
 	AG_psizr.setcontent(nRow_,nCol_,&psizr_dbl(0,0));
-	
+#else
+	// Population the ALGLIB arrays
+	AG_r.setcontent(nCol_,&r_[0]);
+	AG_z.setcontent(nRow_,&z_[0]);
+	AG_psizr.setcontent(nRow_,nCol_,&psizr_(0,0));
+#endif
+
 	// Build the spline
 	AG_M = nRow_;
 	AG_N = nCol_;
@@ -245,6 +261,7 @@ int Ceqdsk::calc_b ( const unsigned int nrow, const unsigned int ncol ) {
 	alglib::real_1d_array AG_fpol;
 	alglib::spline1dinterpolant AG_s;
 
+#ifdef __REAL_FLT__
 	// AGLIB is double only, so copy REAL vectors to double
 	std::vector<double> fluxGrid_dbl(fluxGrid_.begin(),fluxGrid_.end());
 	std::vector<double> fpol_dbl(fpol_.begin(),fpol_.end());
@@ -252,6 +269,11 @@ int Ceqdsk::calc_b ( const unsigned int nrow, const unsigned int ncol ) {
 	// Population the ALGLIB arrays
 	AG_fluxGrid.setcontent(nCol_,&fluxGrid_dbl[0]);
 	AG_fpol.setcontent(nCol_,&fpol_dbl[0]);
+#else
+	// Population the ALGLIB arrays
+	AG_fluxGrid.setcontent(nCol_,&fluxGrid_[0]);
+	AG_fpol.setcontent(nCol_,&fpol_[0]);
+#endif
 
 	// Build the spline
 	alglib::spline1dbuildcubic ( AG_fluxGrid, AG_fpol, AG_s );

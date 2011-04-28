@@ -41,8 +41,8 @@ class array2D {
             pitchBytes = 0;
             ptr = NULL;
             resize(source.M,source.N);
-            for(size_t n=0;n<N;++n) {
-                for(size_t m=0;m<M;++m) {
+            for(size_t m=0;m<M;m++) {
+                for(size_t n=0;n<N;n++) {
                     ptr[ n + N * m ] = (T)source(m,n);
                 }
             }
@@ -56,14 +56,6 @@ class array2D {
             memcpy ( ptr, source.ptr, source.M * source.N * sizeof(T) );
             return *this;
         }
-
-        // cuda assignment 
-        array2D &operator<<(const array2D &source) {
-            this->ptr = source.ptr;
-            this->pitchBytes = source.pitchBytes;
-            return *this;
-        }
-
 
         // indexing
 #ifdef __CUDACC__

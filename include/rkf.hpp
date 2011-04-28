@@ -39,6 +39,13 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	REAL EPS = 1e-3;
 	unsigned int FLAG = 1;
 
+	//for(int r=0;r<textures.bmag.M;r++) {
+	//	for(int c=0;c<textures.bmag.N;c++) {
+	//		std::cout << "move bmag: " << textures.bmag(r,c) << std::endl;
+	//	}
+	//}
+
+
 	Crk K1, K2, K3, K4, K5, K6, R;
 
 	dt = dtMin;
@@ -161,18 +168,18 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			// Make sure integration ends == runTime
 			dt = runTime - t;
 		}
-		else if(dt<dtMin || dt!=dt) {
+		else if(dt<dtMin || dt!=dt || ii>1) {
 #ifndef __CUDA_ARCH__
-			std::cout << "\tdtMin reached: " << dt <<" "<< dtMin << std::endl;
-			std::cout << "\tdelta: "<<delta<<std::endl;
-			std::cout << "\tR_: "<<R_<<std::endl;
-			std::cout << "\tTOL: "<<TOL<<std::endl;
-			std::cout << "\tvPer: "<<p.vPer<<std::endl;
-			std::cout << "\teV: "<<p.energy_eV<<std::endl;
+			printf("dtMin reached: %f, %f\n",dt,dtMin);
+			printf("delta: %f\n",delta);
+			printf("R_: %e\n",R_);
+			printf("TOL: %f\n",TOL);
+			printf("vPer: %f\n",p.vPer);
+			printf("eV: %f\n",p.energy_eV);
 #else
 			cuPrintf("dtMin reached: %f, %f\n",dt,dtMin);
 			cuPrintf("delta: %f\n",delta);
-			cuPrintf("R_: %f\n",R_);
+			cuPrintf("R_: %e\n",R_);
 			cuPrintf("TOL: %f\n",TOL);
 			cuPrintf("vPer: %f\n",p.vPer);
 			cuPrintf("eV: %f\n",p.energy_eV);

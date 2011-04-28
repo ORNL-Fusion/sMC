@@ -51,7 +51,8 @@ class Ceqdsk {
 		int read_file ( std::string );
 		int write_ncfile ( std::string );
 		int bForceTerms ( const int _Z, const int amu);
-		int calc_b ( const unsigned int nrow, const unsigned int ncol );
+		int calc_b();
+		int set_size (const unsigned int nrow, const unsigned int ncol); 
 };
 
 #endif

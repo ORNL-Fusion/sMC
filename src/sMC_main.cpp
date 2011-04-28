@@ -18,7 +18,7 @@ int main ()
 
     int _Z = 1;
     int amu = 1;
-	unsigned int nR = 64, nZ = 128;
+	unsigned int nRow = 32, nCol = 128;
 
 	string fName = "data/eqdsk";
 	//string fName = "data/g122080.03100";
@@ -26,7 +26,8 @@ int main ()
 	Ceqdsk eqdsk;	
 	int stat;
 	stat = eqdsk.read_file ( fName );
-	stat = eqdsk.calc_b ( nZ, nR );
+	stat = eqdsk.set_size(nRow,nCol);  
+	stat = eqdsk.calc_b ();
 	stat = eqdsk.write_ncfile ( "output/bField.nc" );
 	stat = eqdsk.bForceTerms ( _Z, amu );
 
@@ -72,7 +73,7 @@ int main ()
 	time_t startTime, endTime;
 	startTime = time ( NULL );
 
-	for(unsigned int p=0;p<8;p++) {
+	for(unsigned int p=0;p<1;p++) {
 
 		if(!particles[p].status) {
 
@@ -91,7 +92,7 @@ int main ()
 #ifdef USECUDA
     cout << "*** CUDA ***" << endl;
 
-    stat = cu_test_cuda ( particles, eqdsk.nRow, eqdsk.nCol, spans, eqdsk );
+    stat = cu_test_cuda ( particles, nRow, nCol, spans, textures );
 
 	cout << "End of program :)" << endl;
 #endif

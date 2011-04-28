@@ -1,7 +1,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <iostream>
-#include "eqdsk.hpp"
+//#include "eqdsk.hpp"
 #include "constants.hpp"
 #include "cuda_classes.hpp"
 #include "array2D.hpp"
@@ -11,7 +11,7 @@
 #include <vector>
 #include "particle.hpp"
 #include "C/src/simplePrintf/cuPrintf.cu"
-#include <cutil_inline.h>
+//#include <cutil_inline.h>
 #include <ctime>
 
 #define NTHREADS 1 
@@ -54,8 +54,8 @@ __global__ void cu_move_particles (Cgc_particle *const particles,
 __global__ void checkTextures ( Ctextures *const textures ) {
 
 	unsigned int my_idx = blockDim.x * blockIdx.x + threadIdx.x;
-	cuPrintf("%f\n", textures[0].bmag(my_idx,0));
-	cuPrintf("%f\n", tex2D(texRef_bmag,(float)my_idx,0.0));
+	cuPrintf("%i %i %f\n", my_idx, 40, textures[0].bmag(my_idx,40));
+	cuPrintf("%i %i %f\n", my_idx, 40, tex2D(texRef_bmag,(float)my_idx,40.0f));
 
 }
 
@@ -65,7 +65,7 @@ __global__ void check2Dcpy ( Ctextures *const textures,
 	for (int r=0;r<10;++r) {
 			REAL *row = (REAL*)((char*)textures[0].bmag.ptr 
 							+ r*textures[0].bmag.pitchBytes);
-			for (int c=0;c<10;++c) {
+			for (int c=40;c<41;++c) {
 					REAL element = row[c];
                     cuPrintf("%i %i %f\n", r, c, element);
                     cuPrintf("%i %i %f\n", r, c, textures[0].bmag(r,c));
@@ -88,12 +88,9 @@ void copy_2D_to_device
 	size_t height = h_data2D.M;
 	size_t spitchBytes = h_data2D.N * sizeof(REAL);
 
-	CUDA_SAFE_CALL(
-		cudaMallocPitch(&d_data2D.ptr, &d_data2D.pitchBytes, width, height));
-
-	CUT_CHECK_ERROR(
-		cudaMemcpy2D ( d_data2D.ptr, d_data2D.pitchBytes, &h_data2D(0,0), 
-					spitchBytes, width, height, cudaMemcpyHostToDevice ));
+	cudaMallocPitch(&d_data2D.ptr, &d_data2D.pitchBytes, width, height);
+	cudaMemcpy2D(d_data2D.ptr, d_data2D.pitchBytes, &h_data2D(0,0), 
+					spitchBytes, width, height, cudaMemcpyHostToDevice);
 }
 
 REAL* copy_1D_to_device 
@@ -110,7 +107,7 @@ REAL* copy_1D_to_device
 extern "C" 
 int cu_test_cuda 
 ( std::vector<Cgc_particle> &H_particles, 
-    const int nRow, const int nCol, const CinterpSpans &spans, const Ceqdsk &eqdsk ) {
+    const int nRow, const int nCol, const CinterpSpans &spans, const Ctextures &h_textures ) {
 
     // Copy particles to device
 
@@ -125,7 +122,7 @@ int cu_test_cuda
 
     Ctextures h_d_textures;
 
-	copy_2D_to_device (eqdsk.bmag,h_d_textures.bmag);
+	copy_2D_to_device (h_textures.bmag,h_d_textures.bmag);
 
   	texRef_bmag.normalized = 0;
   	texRef_bmag.filterMode = cudaFilterModePoint;
@@ -134,26 +131,25 @@ int cu_test_cuda
 
 	size_t offset = 0;
 	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>();
-  	CUT_CHECK_ERROR(
-		cudaBindTexture2D(&offset, &texRef_bmag, 
+	cudaBindTexture2D(&offset, &texRef_bmag, 
 			h_d_textures.bmag.ptr, 
 			&channelDesc, 
 			h_d_textures.bmag.N, h_d_textures.bmag.M, 
-			h_d_textures.bmag.pitchBytes));
+			h_d_textures.bmag.pitchBytes);
 
-	copy_2D_to_device (eqdsk.br,h_d_textures.b_r);
-	copy_2D_to_device (eqdsk.bp,h_d_textures.b_p);
-	copy_2D_to_device (eqdsk.bz,h_d_textures.b_z);
+	copy_2D_to_device (h_textures.b_r,h_d_textures.b_r);
+	copy_2D_to_device (h_textures.b_p,h_d_textures.b_p);
+	copy_2D_to_device (h_textures.b_z,h_d_textures.b_z);
 
-	copy_2D_to_device (eqdsk.bCurvature_r,h_d_textures.bCurv_r);
-	copy_2D_to_device (eqdsk.bCurvature_p,h_d_textures.bCurv_p);
-	copy_2D_to_device (eqdsk.bCurvature_z,h_d_textures.bCurv_z);
+	copy_2D_to_device (h_textures.bCurv_r,h_d_textures.bCurv_r);
+	copy_2D_to_device (h_textures.bCurv_p,h_d_textures.bCurv_p);
+	copy_2D_to_device (h_textures.bCurv_z,h_d_textures.bCurv_z);
 
-	copy_2D_to_device (eqdsk.bGradient_r,h_d_textures.bGrad_r);
-	copy_2D_to_device (eqdsk.bGradient_p,h_d_textures.bGrad_p);
-	copy_2D_to_device (eqdsk.bGradient_z,h_d_textures.bGrad_z);
+	copy_2D_to_device (h_textures.bGrad_r,h_d_textures.bGrad_r);
+	copy_2D_to_device (h_textures.bGrad_p,h_d_textures.bGrad_p);
+	copy_2D_to_device (h_textures.bGrad_z,h_d_textures.bGrad_z);
 
-	copy_2D_to_device (eqdsk.bDotGradB,h_d_textures.bDotGradB);
+	copy_2D_to_device (h_textures.bDotGradB,h_d_textures.bDotGradB);
 
     std::cout << "DONE" << std::endl;
 
@@ -175,8 +171,8 @@ int cu_test_cuda
 	//check1Dcpy<<<1,1>>>( D_ptrs.z, nRow );
     std::cout << "Testing 2D memcopy ..." << std::endl;
 	check2Dcpy<<<1,1>>>( d_textures, nRow, nCol );
-    //std::cout << "Testing textures ..." << std::endl;
-	//checkTextures<<<1,nRow>>>( d_textures );
+    std::cout << "Testing textures ..." << std::endl;
+	checkTextures<<<1,nRow>>>( d_textures );
 
     std::cout << "Moving particles ..." << std::endl;
 	time_t startTime, endTime;
@@ -184,11 +180,9 @@ int cu_test_cuda
 
 	unsigned int nP;
 	nP = H_particles.size();
-	nP = 8;
+	nP = 1;
 	cu_move_particles<<<NTHREADBLOCKS,NTHREADS>>>
 			( D_particles_ptr, d_textures, spans, nP);
-
-	CUT_CHECK_ERROR("cu_move_particles kernel failure");
 
     cudaPrintfDisplay (stdout, true);
     cudaPrintfEnd();

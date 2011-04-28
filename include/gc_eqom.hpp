@@ -93,6 +93,10 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
             err++;
 #ifndef __CUDA_ARCH__
 			std::cout << "\tget_index() result off grid:" << std::endl;
+			printf("p.r: %f, p.z: %f\n",p.r,p.z);
+			printf("spans.mfront: %f, spans.mback: %f, spans.nfront: %f, spans.nback %f, spans.NROW: %i, spans.NCOL: %i\n", 
+							spans.mfront, spans.mback, spans.nfront, spans.nback, 
+							spans.NROW, spans.NCOL);
 #else
 			cuPrintf("get_index() result off grid: %i %i %i %i %f %f\n", 
 							index.m1, index.m2, index.n1, index.n2, index.m, index.n);
@@ -107,12 +111,17 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 #ifdef __CUDA_ARCH__
 			cuPrintf("get_index() GOOD: %i %i %i %i %f %f\n", 
 							index.m1, index.m2, index.n1, index.n2, index.m, index.n);
+#else
+			printf("get_index() GOOD: %i %i %i %i %f %f\n", 
+							index.m1, index.m2, index.n1, index.n2, index.m, index.n);
 #endif
 		}
 
         REAL bmag = bilinear_interp ( index, textures.bmag );
 #ifdef __CUDA_ARCH__
 			cuPrintf("bmag: %f\n", bmag);
+#else
+			printf("bmag: %f\n", bmag);
 #endif
 	
         REAL b_r = bilinear_interp ( index, textures.b_r );
@@ -138,7 +147,7 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 	    // dvPar_dt
 	    REAL dvPar_dt = -mu / _mi * bDotGradB;
 	    // Here vGC is a dvGC and so vGC.vPar is really a dvPar.
-	    // I'm just using the Crk class as containers for x/dx and v/dv quantities.
+	    // I'm just using the Crk class as containers for x/dt and v/dt quantities.
 	    vGC.vPar = dvPar_dt; 
 	    REAL vPar = p.vPar;
 
@@ -147,21 +156,13 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 	    vGC.p = vPar * unitb_p + pow(vPer,2) * bGrad_p + pow(vPar,2) * bCurv_p;
 	    vGC.z = vPar * unitb_z + pow(vPer,2) * bGrad_z + pow(vPar,2) * bCurv_z;
 
-#ifdef __CUDA_ARCH__
+//#ifdef __CUDA_ARCH__
 //
 //	cuPrintf("end of vGC vPar: %f\n",vGC.vPar);
-//	cuPrintf("end of vGC vPer: %f\n",vPer);
-//	cuPrintf("end of vGC vPar: %f\n",vPar);
-//	
-//	cuPrintf("end of vGC bmag: %f\n",bmag);
-//	cuPrintf("vGC spans: %f %f %i %f %f %i\n",
-//					spans.mfront, spans.mback, spans.NROW, 
-//					spans.nfront, spans.nback, spans.NCOL);
-//	cuPrintf("vGC index: %i %i %f %i %i %f %i\n",
-//					index.m1, index.m2, index.m, 
-//					index.n1, index.n2, index.n, index.stat);
-
-//	cuPrintf("end of vGC bDotGradB: %f\n",bDotGradB);
+//	cuPrintf("end of vPer: %f\n",vPer);
+//	cuPrintf("end of vPar: %f\n",vPar);
+//  
+//	cuPrintf("end of vGC bDotGradB: %e\n",bDotGradB);
 //
 //	cuPrintf("end of vGC r: %f\n",vGC.r);
 //	cuPrintf("end of vGC p: %f\n",vGC.p);
@@ -171,15 +172,36 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 //	cuPrintf("end of vGC unitb_p: %f\n",unitb_p);
 //	cuPrintf("end of vGC unitb_z: %f\n",unitb_z);
 //
-//	cuPrintf("end of vGC bGrad_r: %f\n",bGrad_r);
-//	cuPrintf("end of vGC bGrad_p: %f\n",bGrad_p);
-//	cuPrintf("end of vGC bGrad_z: %f\n",bGrad_z);
+//	cuPrintf("end of vGC bGrad_r: %e\n",bGrad_r);
+//	cuPrintf("end of vGC bGrad_p: %e\n",bGrad_p);
+//	cuPrintf("end of vGC bGrad_z: %e\n",bGrad_z);
 //
-//	cuPrintf("end of vGC bCurv_r: %f\n",bCurv_r);
-//	cuPrintf("end of vGC bCurv_p: %f\n",bCurv_p);
-//	cuPrintf("end of vGC bCurv_z: %f\n",bCurv_z);
+//	cuPrintf("end of vGC bCurv_r: %e\n",bCurv_r);
+//	cuPrintf("end of vGC bCurv_p: %e\n",bCurv_p);
+//	cuPrintf("end of vGC bCurv_z: %e\n",bCurv_z);
+//#else
+//	printf("end of vGC vPar: %f\n",vGC.vPar);
+//	printf("end of vPer: %f\n",vPer);
+//	printf("end of vPar: %f\n",vPar);
+//  
+//	printf("end of vGC bDotGradB: %e\n",bDotGradB);
 //
-#endif
+//	printf("end of vGC r: %f\n",vGC.r);
+//	printf("end of vGC p: %f\n",vGC.p);
+//	printf("end of vGC z: %f\n",vGC.z);
+//
+//	printf("end of vGC unitb_r: %f\n",unitb_r);
+//	printf("end of vGC unitb_p: %f\n",unitb_p);
+//	printf("end of vGC unitb_z: %f\n",unitb_z);
+//
+//	printf("end of vGC bGrad_r: %e\n",bGrad_r);
+//	printf("end of vGC bGrad_p: %e\n",bGrad_p);
+//	printf("end of vGC bGrad_z: %e\n",bGrad_z);
+//
+//	printf("end of vGC bCurv_r: %e\n",bCurv_r);
+//	printf("end of vGC bCurv_p: %e\n",bCurv_p);
+//	printf("end of vGC bCurv_z: %e\n",bCurv_z);
+//#endif
 	
     } // End if(!err) 
 
