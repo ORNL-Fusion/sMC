@@ -12,10 +12,16 @@
 #include "C/src/simplePrintf/cuPrintf.cu"
 #include <ctime>
 
-#define NTHREADS 1 
-#define NTHREADBLOCKS 1
+#define NTHREADS 128 
+#define NTHREADBLOCKS 256 
 
-texture<float,cudaTextureType2D,cudaReadModeElementType> texRef_bmag;
+#define SETUP_TEXTURE(texRef,array2D,NROW,NCOL) \
+	(texRef).normalized = 0; \
+  	(texRef).filterMode = cudaFilterModeLinear; \
+  	(texRef).addressMode[0] = cudaAddressModeClamp; \
+  	(texRef).addressMode[1] = cudaAddressModeClamp; \
+	cudaBindTexture2D(0,&(texRef),(array2D).ptr,\
+					&channelDesc,(NCOL),(NROW),(array2D).pitchBytes)
 
 __global__ void cu_move_particles (Cgc_particle *const particles, 
                     Ctextures *const textures, const CinterpSpans spans, const unsigned int nP) {
@@ -26,15 +32,8 @@ __global__ void cu_move_particles (Cgc_particle *const particles,
 
         int stat;
 	    for(unsigned int p=my_idx;p<nP;p+=NTHREADS*NTHREADBLOCKS) {
-
+			
 	    	if(!particles[p].status) {
-
-	    		cuPrintf("Particle No. %i\n",p) ;
-				cuPrintf("eV: %f\n",particles[p].energy_eV);
-	    		cuPrintf("mu: %e\n",particles[p].mu);
-	    		cuPrintf("r: %f\n",particles[p].r);
-	    		cuPrintf("p: %f\n",particles[p].p);
-	    		cuPrintf("z: %f\n",particles[p].z);
 
                 stat = move_particle ( particles[p], textures[0], spans, p );
 	    		
@@ -115,10 +114,15 @@ int cu_test_cuda
 
     // Copy particles to device
 
-    std::cout << "\tCopying particle list to device ... ";
-    thrust::device_vector<Cgc_particle> D_particles ( H_particles.begin(), H_particles.end() );
-    Cgc_particle * D_particles_ptr = thrust::raw_pointer_cast(&D_particles[0]);
-    std::cout << "DONE" << std::endl;
+    //std::cout << "\tCopying particle list to device ... ";
+    //thrust::device_vector<Cgc_particle> D_particles ( H_particles.begin(), H_particles.end() );
+    //Cgc_particle * D_particles_ptr = thrust::raw_pointer_cast(&D_particles[0]);
+    //std::cout << "DONE" << std::endl;
+
+	Cgc_particle *D_particles;
+	size_t sizeParticles = H_particles.size() * sizeof(Cgc_particle);
+	cudaMalloc ( (void**)&D_particles, sizeParticles );
+	cudaMemcpy ( D_particles, &H_particles[0], sizeParticles, cudaMemcpyHostToDevice);
 
     // Copy background data to device
 
@@ -156,28 +160,32 @@ int cu_test_cuda
 	cudaMalloc ( (void**)&d_textures, size );
 	cudaMemcpy ( d_textures, &h_d_textures, size, cudaMemcpyHostToDevice);
 
-  	texRef_bmag.normalized = 0;
-  	texRef_bmag.filterMode = cudaFilterModePoint;
-  	texRef_bmag.addressMode[0] = cudaAddressModeClamp;
-  	texRef_bmag.addressMode[1] = cudaAddressModeClamp;
-
-	size_t offset = 0;
+	// Setup hardware textures
 	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>();
-	cudaBindTexture2D(&offset, &texRef_bmag, 
-			h_d_textures.bmag.ptr, 
-			&channelDesc, 
-			h_textures.bmag.N, h_textures.bmag.M, 
-			h_d_textures.bmag.pitchBytes);
 
+	SETUP_TEXTURE(texRef_bmag,h_d_textures.bmag,nRow,nCol);
+	SETUP_TEXTURE(texRef_bDotGradB,h_d_textures.bDotGradB,nRow,nCol);
+
+	SETUP_TEXTURE(texRef_bCurv_r,h_d_textures.bCurv_r,nRow,nCol);
+	SETUP_TEXTURE(texRef_bCurv_p,h_d_textures.bCurv_p,nRow,nCol);
+	SETUP_TEXTURE(texRef_bCurv_z,h_d_textures.bCurv_z,nRow,nCol);
+
+	SETUP_TEXTURE(texRef_bGrad_r,h_d_textures.bGrad_r,nRow,nCol);
+	SETUP_TEXTURE(texRef_bGrad_p,h_d_textures.bGrad_p,nRow,nCol);
+	SETUP_TEXTURE(texRef_bGrad_z,h_d_textures.bGrad_z,nRow,nCol);
+
+	SETUP_TEXTURE(texRef_b_r,h_d_textures.b_r,nRow,nCol);
+	SETUP_TEXTURE(texRef_b_p,h_d_textures.b_p,nRow,nCol);
+	SETUP_TEXTURE(texRef_b_z,h_d_textures.b_z,nRow,nCol);
 
     cudaPrintfInit();
 
     //std::cout << "Testing 1D memcopy ..." << std::endl;
 	//check1Dcpy<<<1,1>>>( D_ptrs.z, nRow );
-    std::cout << "Testing 2D memcopy ..." << std::endl;
-	check2Dcpy<<<1,1>>>( d_textures, nRow, nCol );
-    std::cout << "Testing textures ..." << std::endl;
-	checkTextures<<<1,10>>>( d_textures );
+    //std::cout << "Testing 2D memcopy ..." << std::endl;
+	//check2Dcpy<<<1,1>>>( d_textures, nRow, nCol );
+    //std::cout << "Testing textures ..." << std::endl;
+	//checkTextures<<<1,10>>>( d_textures );
 
     std::cout << "Moving particles ..." << std::endl;
 	time_t startTime, endTime;
@@ -185,9 +193,9 @@ int cu_test_cuda
 
 	unsigned int nP;
 	nP = H_particles.size();
-	nP = 1;
+	//nP = 10;
 	cu_move_particles<<<NTHREADBLOCKS,NTHREADS>>>
-			( D_particles_ptr, d_textures, spans, nP);
+			( D_particles, d_textures, spans, nP);
 
     cudaPrintfDisplay (stdout, true);
     cudaPrintfEnd();

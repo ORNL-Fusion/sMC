@@ -15,7 +15,7 @@
 #include "C/src/simplePrintf/cuPrintf.cu"
 #endif
 
-#define __SAVE_ORBITS__
+//#define __SAVE_ORBITS__
 
 // Runge-Kutta-Fehlberg integrator
 // pg. 254 Burden and Faires
@@ -39,13 +39,6 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	REAL EPS = 1e-3;
 	unsigned int FLAG = 1;
 
-	//for(int r=0;r<textures.bmag.M;r++) {
-	//	for(int c=0;c<textures.bmag.N;c++) {
-	//		std::cout << "move bmag: " << textures.bmag(r,c) << std::endl;
-	//	}
-	//}
-
-
 	Crk K1, K2, K3, K4, K5, K6, R;
 
 	dt = dtMin;
@@ -54,20 +47,19 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	Crk w(p.r,p.p,p.z,p.vPar);
 
 //#ifdef __CUDA_ARCH__
+//	cuPrintf("move_particle particle: %i\n",pp);
 //	cuPrintf("move_particle eV: %f\n",p.energy_eV);
 //	cuPrintf("move_particle r: %f\n",p.r);
 //	cuPrintf("move_particle p: %f\n",p.p);
 //	cuPrintf("move_particle z: %f\n",p.z);
 //	cuPrintf("move_particle vPar: %f\n",p.vPar);
-//
-//	cuPrintf("move_particle r: %f\n",w.r);
-//	cuPrintf("move_particle p: %f\n",w.p);
-//	cuPrintf("move_particle z: %f\n",w.z);
-//	cuPrintf("move_particle vPar: %f\n",w.vPar);
-//
-//	cuPrintf("move_particle spans: %f %f %i %f %f %i\n",
-//					spans.rfront, spans.rback, spans.rsize, 
-//					spans.zfront, spans.zback, spans.zsize);
+//#else
+//	printf("move_particle particle: %i\n",pp);
+//	printf("move_particle eV: %f\n",p.energy_eV);
+//	printf("move_particle r: %f\n",p.r);
+//	printf("move_particle p: %f\n",p.p);
+//	printf("move_particle z: %f\n",p.z);
+//	printf("move_particle vPar: %f\n",p.vPar);
 //#endif
 
 #ifndef __CUDA_ARCH__
@@ -168,16 +160,16 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			// Make sure integration ends == runTime
 			dt = runTime - t;
 		}
-		else if(dt<dtMin || dt!=dt || ii>1) {
+		else if(dt<dtMin || dt!=dt) {
 #ifndef __CUDA_ARCH__
-			printf("dtMin reached: %f, %f\n",dt,dtMin);
+			printf("dtMin reached: %e, %e\n",dt,dtMin);
 			printf("delta: %f\n",delta);
 			printf("R_: %e\n",R_);
 			printf("TOL: %f\n",TOL);
 			printf("vPer: %f\n",p.vPer);
 			printf("eV: %f\n",p.energy_eV);
 #else
-			cuPrintf("dtMin reached: %f, %f\n",dt,dtMin);
+			cuPrintf("dtMin reached: %e, %e\n",dt,dtMin);
 			cuPrintf("delta: %f\n",delta);
 			cuPrintf("R_: %e\n",R_);
 			cuPrintf("TOL: %f\n",TOL);

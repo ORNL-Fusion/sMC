@@ -3,7 +3,6 @@
 
 #include "particle.hpp"
 #include "constants.hpp"
-//#include "eqdsk.hpp"
 #include <vector>
 #include "array2D.hpp"
 #include "interp.hpp"

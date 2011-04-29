@@ -82,21 +82,15 @@ __host__ __device__
 REAL bilinear_interp 
     ( const CinterpIndex &index , const array2D<REAL,BCHECK> &data ) {
 
-	REAL f11 = data(index.m1,index.n1);
-	REAL f21 = data(index.m2,index.n1);
-	REAL f12 = data(index.m1,index.n2);
-	REAL f22 = data(index.m2,index.n2);
+	REAL x = index.n - index.n1;
+	REAL y = index.m2 - index.m;
 
-//#ifdef __CUDA_ARCH__
-//	cuPrintf("f11: %f, f21: %f, f12: %f, f22: %f\n", f11,f21,f12,f22);
-//#endif
+	REAL f00 = data(index.m2,index.n1);
+	REAL f10 = data(index.m2,index.n2);
+	REAL f01 = data(index.m1,index.n1);
+	REAL f11 = data(index.m1,index.n2);
 
-	// (x2-x1)(y2-y1) == 1 since i'm using indices
-
-	REAL dataOut = f11 * (index.m2-index.m)*(index.n2-index.n)
-			+ f21 * (index.m-index.m1)*(index.n2-index.n)
-			+ f12 * (index.m2-index.m)*(index.n-index.n1)
-			+ f22 * (index.m-index.m1)*(index.n-index.n1); 
+	REAL dataOut = f00*(1-x)*(1-y)+f10*x*(1-y)+f01*(1-x)*y+f11*x*y;
 
     return dataOut;
 }

@@ -18,7 +18,7 @@ int main ()
 
     int _Z = 1;
     int amu = 1;
-	unsigned int nRow = 256, nCol = 128;
+	unsigned int nRow = 512, nCol = 256;
 
 	string fName = "data/eqdsk";
 	//string fName = "data/g122080.03100";
@@ -69,16 +69,14 @@ int main ()
 				( pow(particles[p].vPer,2) + pow(particles[p].vPar,2) ) / _e;
 	} // end for(unsigned int p=0;p<particles.size();p++)	
 
-
+	vector<Cgc_particle> particles_CUDA(particles);	
+	
 	time_t startTime, endTime;
 	startTime = time ( NULL );
 
-	for(unsigned int p=0;p<1;p++) {
+	for(unsigned int p=0;p<10;p++) {
 
 		if(!particles[p].status) {
-
-			cout << "Particle No. " << p << endl;
-			cout << "eV: " << particles[p].energy_eV << endl;
 
             stat = move_particle ( particles[p], textures, spans, p );
 			
@@ -92,7 +90,7 @@ int main ()
 #ifdef USECUDA
     cout << "*** CUDA ***" << endl;
 
-    stat = cu_test_cuda ( particles, nRow, nCol, spans, textures );
+    stat = cu_test_cuda ( particles_CUDA, nRow, nCol, spans, textures );
 
 	cout << "End of program :)" << endl;
 #endif
