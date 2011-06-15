@@ -29,7 +29,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
         const CinterpSpans &spans, const unsigned int pp ) {
 
     // Reset counters for new paricle 
- 	unsigned int ii = 0;	
+ 	unsigned int ii = 0, jj = 0;	
 	int err = 0;
 	REAL t = 0.0;
 	REAL runTime = 1e-3;
@@ -39,28 +39,12 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	REAL EPS = 1e-3;
 	unsigned int FLAG = 1;
 
-	Crk K1, K2, K3, K4, K5, K6, R;
+	Crk K1, K2, K3, K4, K5, K6, R, v_ms;
 
 	dt = dtMin;
 
 	// Initial position w
 	Crk w(p.r,p.p,p.z,p.vPar);
-
-//#ifdef __CUDA_ARCH__
-//	cuPrintf("move_particle particle: %i\n",pp);
-//	cuPrintf("move_particle eV: %f\n",p.energy_eV);
-//	cuPrintf("move_particle r: %f\n",p.r);
-//	cuPrintf("move_particle p: %f\n",p.p);
-//	cuPrintf("move_particle z: %f\n",p.z);
-//	cuPrintf("move_particle vPar: %f\n",p.vPar);
-//#else
-//	printf("move_particle particle: %i\n",pp);
-//	printf("move_particle eV: %f\n",p.energy_eV);
-//	printf("move_particle r: %f\n",p.r);
-//	printf("move_particle p: %f\n",p.p);
-//	printf("move_particle z: %f\n",p.z);
-//	printf("move_particle vPar: %f\n",p.vPar);
-//#endif
 
 #ifndef __CUDA_ARCH__
 #ifdef __SAVE_ORBITS__
@@ -73,19 +57,11 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	while(FLAG==1) {
 
 		// Given a position, mu and vPar calculate vGC
+		// K1,K2, etc contain dx (position) and dvPar.
+		
 		K1 = dt * vGC ( 0.0, 
 				w, 
 				p.mu, textures, spans, err );
-
-		if(!K1.isValid()) {
-			err++;
-#ifndef __CUDA_ARCH__
-			std::cout << "\tK1 not valid" << std::endl;
-#else
-			cuPrintf("\tK1 not valid\n");
-#endif
-			return err;
-		}	
 
 		K2 = dt * vGC ( 1.0/4.0 * dt, 
 				w + K1 * 1.0/4.0, 
@@ -129,8 +105,64 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 				// Approximation accepted
 				t += dt;
 				w += 25.0/216.0*K1 + 1408.0/2565.0*K3 + 2197.0/4104.0*K4 - 1.0/5.0*K5;
+				jj++;
+
+				// Apply pitch angle scatter
+				// 
+				// Monte-Carlo evaluation of transport coefficients
+				// Boozer and Kuo-Petravic
+				// Phys. Fluids, 24, 851 (1981)
+
+				v_ms = vGC ( 0.0, w, p.mu, textures, spans, err );
+				double vMag_ms = sqrt( pow(v_ms.r,2) + pow(v_ms.p,2) + pow(v_ms.z,2) );
+
+				double pitch_0 = w.vPar / vMag_ms;
+
+				float coulomb_log =23.0; 
+				double T_background_eV = 0.1e3;
+				double n_background_cm3 = 1e13;
+
+				// vTh is here done in SI units since the x variable is dimensionless
+				double vTh_ms = sqrt ( 2 * T_background_eV * _e / (p.amu*_mi) );
+
+				// cgs units here following Boozer
+				double nu_B = coulomb_log / 10.0 / 3e6 * sqrt(2.0/p.amu) * n_background_cm3 / T_background_eV;
+
+				// x is the dimensionless ratio of v to vTh
+				double x =  vMag_ms / vTh_ms;
+
+				double phi_x = erf ( x );	
+				// Here we use the analytic erf derivative (Phi prime)
+				double phi_x_dx = 2 / sqrt (_pi) * exp ( pow(-x,2) );
+				double psi_x = ( phi_x - x * phi_x_dx ) / ( 2 * pow(x,2) );
+
+				double nu_D = 3 * sqrt (_pi/2) * nu_B * (phi_x-psi_x)/pow(x,3);
+
+				// random number generation
+
+				srand(time(0));
+				int pm = rand() % 2; // 0 or 1, i.e., odd or even
+				if(!pm) pm = -1;
+
+				// apply pitch kick
+				
+				double pitch_1 = pitch_0 * (1-nu_D*dt) * pm * sqrt ( (1-pow(pitch_0,2)) * nu_D*dt );
+
+#ifndef __CUDA_ARCH__
+			printf  ("\tv/vTh = %f\n", x);
+			printf  ("\tnu_D/nu_B = %e\n", nu_D/nu_B);
+			printf  ("\tnu_D*dt = %e\n", nu_D*dt);
+			printf  ("\tdt: %e, dtMin: %e\n", dt, 0.1/nu_D);
+#else
+			cuPrintf("\tv/vTh = %f\n", x);
+			cuPrintf("\tnu_D/nu_B = %e\n", nu_D/nu_B);
+			cuPrintf("\tnu_D*dt = %e\n", nu_D*dt);
+			cuPrintf  ("\tdt: %e, dtMin: %e\n", dt, 0.1/nu_D);
+#endif
+ 
 		}
 
+//#ifndef __PROFILING__
 		// Adjust time step
 		if(delta<=0.1) {
 			dt = 0.1 * dt;
@@ -141,7 +173,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 		else {
 			dt = delta * dt;
 		}
-
+//#endif
 		// Catch max dt
 		if(dt>dtMax) {
 #ifndef __CUDA_ARCH__
@@ -198,9 +230,9 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	p.vPar = w.vPar;
 
 #ifndef __CUDA_ARCH__
-	std::cout << "\t nSteps: " << ii << std::endl;
+	std::cout << "\t nSteps: " << ii <<" with "<< jj << " accepted."<< std::endl;
 #else
-    cuPrintf("nSteps: %i\n", ii);
+    cuPrintf("nSteps: %i with %i accepted.\n", ii,jj);
 #endif
 
 #ifndef __CUDA_ARCH__

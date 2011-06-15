@@ -9,5 +9,6 @@
 
 #define _e 1.602176e-19
 #define _mi 1.67262158e-27
+#define _pi 3.14159265
 
 #endif

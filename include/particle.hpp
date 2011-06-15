@@ -9,7 +9,7 @@ class Cgc_particle {
 
 	public:
 		REAL r, p, z, vPer, vPar, weight, mu, energy_eV;
-		int status;
+		int status, amu, Z;
 };
 
 #endif

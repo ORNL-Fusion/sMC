@@ -64,7 +64,8 @@ NVCCFLAGS += $(INCLUDEFLAGS)
 SRCTYPES := c cpp 
 ifdef USECUDA
 SRCTYPES += cu
-CPPFLAGS += -DUSECUDA
+CPPFLAGS += -DUSECUDA #-D__PROFILING__
+NVCCFLAGS += #-D__PROFILING__
 endif
 OBJ := $(foreach srctype, $(SRCTYPES), $(patsubst %.$(srctype), obj/%.o, $(wildcard $(patsubst %, %/*.$(srctype), $(MODULES)))))
 

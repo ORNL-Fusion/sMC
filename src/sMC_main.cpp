@@ -55,7 +55,7 @@ int main ()
     // Create the particle list
 	vector<Cgc_particle> particles;	
 
-	string plName = "data/pList.dav.nc.000";
+	string plName = "data/fdis_D_40keV_D3D.nc";
 	stat = read_pl ( plName, particles );
 
 	// Get bMag @ particle locations and calculate mu.
@@ -64,6 +64,8 @@ int main ()
 	for(unsigned int p=0;p<particles.size();p++){
 		index = get_index ( particles[p].z, particles[p].r, spans );
 		bmag_p = bilinear_interp ( index, eqdsk.bmag );
+		particles[p].amu = amu;
+		particles[p].Z = _Z;
 		particles[p].mu = ( amu * _mi ) * pow(particles[p].vPer,2) / ( 2.0 * bmag_p );
 		particles[p].energy_eV = 0.5 * ( amu * _mi ) * 
 				( pow(particles[p].vPer,2) + pow(particles[p].vPar,2) ) / _e;

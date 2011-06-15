@@ -13,7 +13,7 @@
 #include <ctime>
 
 #define NTHREADS 128 
-#define NTHREADBLOCKS 256 
+#define NTHREADBLOCKS 60
 
 #define SETUP_TEXTURE(texRef,array2D,NROW,NCOL) \
 	(texRef).normalized = 0; \
@@ -34,9 +34,12 @@ __global__ void cu_move_particles (Cgc_particle *const particles,
 	    for(unsigned int p=my_idx;p<nP;p+=NTHREADS*NTHREADBLOCKS) {
 			
 	    	if(!particles[p].status) {
-
+#ifndef __PROFILING__
                 stat = move_particle ( particles[p], textures[0], spans, p );
-	    		
+#else
+	            stat = move_particle ( particles[0], textures[0], spans, 0 );
+#endif
+    		
 	    	} // end if(!particle[p].status)
 	    } // end for(p)
 

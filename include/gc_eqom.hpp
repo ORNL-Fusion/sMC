@@ -96,6 +96,9 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
         
 	    CinterpIndex index;
 	    index = get_index (p.z,p.r,spans);
+///#ifdef __PROFILING__
+///		index.stat = 0;
+///#endif
         
 	    if(index.stat>=1) {
             err++;
@@ -125,7 +128,7 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 //#endif
 //		}
 
-//#ifndef __CUDA_ARCH__	
+#ifndef __CUDA_ARCH__	
         REAL bmag = bilinear_interp ( index, textures.bmag );
         REAL bDotGradB = bilinear_interp ( index, textures.bDotGradB );
 
@@ -140,32 +143,33 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
         REAL bGrad_r = bilinear_interp ( index, textures.bGrad_r );
         REAL bGrad_p = bilinear_interp ( index, textures.bGrad_p );
         REAL bGrad_z = bilinear_interp ( index, textures.bGrad_z );
+
 //#ifndef __CUDA_ARCH__	
 
 		//printf("bmag: %f\n", bmag);
 		//printf("bDotGradB: %e\n", bDotGradB);
 		//printf("bCurv_r: %e\n", bCurv_r);
 
-//#else
-//		float bmag = tex2D(texRef_bmag,index.n+0.5f,index.m+0.5f);
-//		float bDotGradB = tex2D(texRef_bDotGradB,index.n+0.5f,index.m+0.5f);
-//
-//		float b_r = tex2D(texRef_b_r,index.n+0.5f,index.m+0.5f);
-//		float b_p = tex2D(texRef_b_p,index.n+0.5f,index.m+0.5f);
-//		float b_z = tex2D(texRef_b_z,index.n+0.5f,index.m+0.5f);
-//
-//		float bCurv_r = tex2D(texRef_bCurv_r,index.n+0.5f,index.m+0.5f);
-//		float bCurv_p = tex2D(texRef_bCurv_p,index.n+0.5f,index.m+0.5f);
-//		float bCurv_z = tex2D(texRef_bCurv_z,index.n+0.5f,index.m+0.5f);
-//
-//		float bGrad_r = tex2D(texRef_bGrad_r,index.n+0.5f,index.m+0.5f);
-//		float bGrad_p = tex2D(texRef_bGrad_p,index.n+0.5f,index.m+0.5f);
-//		float bGrad_z = tex2D(texRef_bGrad_z,index.n+0.5f,index.m+0.5f);
-//
-//		//cuPrintf("bmag: %f\n", bmag);
-//		//cuPrintf("bDotGradB: %e\n", bDotGradB);
-//		//cuPrintf("bCurv_r: %e\n", bCurv_r);
-//#endif
+#else
+		float bmag = tex2D(texRef_bmag,index.n+0.5f,index.m+0.5f);
+		float bDotGradB = tex2D(texRef_bDotGradB,index.n+0.5f,index.m+0.5f);
+
+		float b_r = tex2D(texRef_b_r,index.n+0.5f,index.m+0.5f);
+		float b_p = tex2D(texRef_b_p,index.n+0.5f,index.m+0.5f);
+		float b_z = tex2D(texRef_b_z,index.n+0.5f,index.m+0.5f);
+
+		float bCurv_r = tex2D(texRef_bCurv_r,index.n+0.5f,index.m+0.5f);
+		float bCurv_p = tex2D(texRef_bCurv_p,index.n+0.5f,index.m+0.5f);
+		float bCurv_z = tex2D(texRef_bCurv_z,index.n+0.5f,index.m+0.5f);
+
+		float bGrad_r = tex2D(texRef_bGrad_r,index.n+0.5f,index.m+0.5f);
+		float bGrad_p = tex2D(texRef_bGrad_p,index.n+0.5f,index.m+0.5f);
+		float bGrad_z = tex2D(texRef_bGrad_z,index.n+0.5f,index.m+0.5f);
+
+		//cuPrintf("bmag: %f\n", bmag);
+		//cuPrintf("bDotGradB: %e\n", bDotGradB);
+		//cuPrintf("bCurv_r: %e\n", bCurv_r);
+#endif
 
 	    REAL unitb_r = b_r / bmag;
 	    REAL unitb_p = b_p / bmag;
