@@ -37,7 +37,8 @@ NVCCFLAGS := --compiler-bindir $(GCCDIR) -arch $(CUDA_ARCH) --ptxas-options=-v #
 LFLAGS := -L$(NETCDFDIR)/lib -L$(CUDALIBDIR) 
 LIBS := $(ALGLIBDIR)/*.o -lcuda -lcudart -lnetcdf_c++ -lnetcdf
 
-USECUDA:=true 
+USECUDA:=#true 
+DEBUG:=4
 
 LINK := $(CPP) -pg
 
@@ -57,14 +58,14 @@ all : $(NAME)
 INCLUDEFLAGS += $(patsubst %, -I%, $(MODULES))
 
 CFLAGS += $(INCLUDEFLAGS)
-CPPFLAGS += $(INCLUDEFLAGS)
-NVCCFLAGS += $(INCLUDEFLAGS)
+CPPFLAGS += $(INCLUDEFLAGS) -DDEBUGLEVEL=$(DEBUG)
+NVCCFLAGS += $(INCLUDEFLAGS) -DDEBUGLEVEL=$(DEBUG)
 
 # determine the object files
 SRCTYPES := c cpp 
 ifdef USECUDA
 SRCTYPES += cu
-CPPFLAGS += -DUSECUDA #-D__PROFILING__
+CPPFLAGS += -DUSECUDA  #-D__PROFILING__
 NVCCFLAGS += #-D__PROFILING__
 endif
 OBJ := $(foreach srctype, $(SRCTYPES), $(patsubst %.$(srctype), obj/%.o, $(wildcard $(patsubst %, %/*.$(srctype), $(MODULES)))))

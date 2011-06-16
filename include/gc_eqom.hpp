@@ -80,6 +80,19 @@ class Ctextures {
         }
 };
 
+// Calculate vPer given position and mu
+
+#ifdef __CUDACC__
+__host__ __device__
+#endif
+REAL get_vPer ( const Crk &p, const REAL mu, const Ctextures &textures, const CinterpSpans &spans ) {
+
+	    CinterpIndex index;
+	    index = get_index (p.z,p.r,spans);
+        REAL bmag = bilinear_interp ( index, textures.bmag );
+	    return sqrtf ( 2.0 * mu * bmag / _mi );
+}
+
 // Calculate vGC given position, mu and vPar.
 
 #ifdef __CUDACC__
@@ -146,10 +159,6 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 
 //#ifndef __CUDA_ARCH__	
 
-		//printf("bmag: %f\n", bmag);
-		//printf("bDotGradB: %e\n", bDotGradB);
-		//printf("bCurv_r: %e\n", bCurv_r);
-
 #else
 		float bmag = tex2D(texRef_bmag,index.n+0.5f,index.m+0.5f);
 		float bDotGradB = tex2D(texRef_bDotGradB,index.n+0.5f,index.m+0.5f);
@@ -166,9 +175,6 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 		float bGrad_p = tex2D(texRef_bGrad_p,index.n+0.5f,index.m+0.5f);
 		float bGrad_z = tex2D(texRef_bGrad_z,index.n+0.5f,index.m+0.5f);
 
-		//cuPrintf("bmag: %f\n", bmag);
-		//cuPrintf("bDotGradB: %e\n", bDotGradB);
-		//cuPrintf("bCurv_r: %e\n", bCurv_r);
 #endif
 
 	    REAL unitb_r = b_r / bmag;
@@ -182,12 +188,17 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 	    // Here vGC is a dvGC and so vGC.vPar is really a dvPar.
 	    // I'm just using the Crk class as containers for x/dt and v/dt quantities.
 	    vGC.vPar = dvPar_dt; 
-	    REAL vPar = p.vPar;
 
 	    // vGC
-	    vGC.r = vPar * unitb_r + pow(vPer,2) * bGrad_r + pow(vPar,2) * bCurv_r;
-	    vGC.p = vPar * unitb_p + pow(vPer,2) * bGrad_p + pow(vPar,2) * bCurv_p;
-	    vGC.z = vPar * unitb_z + pow(vPer,2) * bGrad_z + pow(vPar,2) * bCurv_z;
+	    vGC.r = p.vPar * unitb_r + pow(vPer,2) * bGrad_r + pow(p.vPar,2) * bCurv_r;
+	    vGC.p = p.vPar * unitb_p + pow(vPer,2) * bGrad_p + pow(p.vPar,2) * bCurv_p;
+	    vGC.z = p.vPar * unitb_z + pow(vPer,2) * bGrad_z + pow(p.vPar,2) * bCurv_z;
+
+#if DEBUGLEVEL >= 4
+		printf("v_r: %f, v_p: %f, v_z: %f\n", vGC.r, vGC.p, vGC.z);
+		printf("vPer: %f, vPar: %f\n", vPer, p.vPar);
+#endif
+
 
     } // End if(!err) 
 

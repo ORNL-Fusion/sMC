@@ -114,26 +114,31 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 				// Phys. Fluids, 24, 851 (1981)
 
 				v_ms = vGC ( 0.0, w, p.mu, textures, spans, err );
-				double vMag_ms = sqrt( pow(v_ms.r,2) + pow(v_ms.p,2) + pow(v_ms.z,2) );
+
+				REAL vPer = get_vPer ( w, p.mu, textures, spans );
+
+				double vMag_ms = sqrt( pow(w.vPar,2) + pow(vPer,2) );
 
 				double pitch_0 = w.vPar / vMag_ms;
 
 				float coulomb_log =23.0; 
-				double T_background_eV = 0.1e3;
+				double E_background_eV = 1.0e3;
+				double T_background_eV = 2.0/3.0 * E_background_eV;
 				double n_background_cm3 = 1e13;
 
 				// vTh is here done in SI units since the x variable is dimensionless
 				double vTh_ms = sqrt ( 2 * T_background_eV * _e / (p.amu*_mi) );
 
 				// cgs units here following Boozer
-				double nu_B = coulomb_log / 10.0 / 3e6 * sqrt(2.0/p.amu) * n_background_cm3 / T_background_eV;
+				double nu_B = coulomb_log / 10.0 / 3e6 * sqrt(2.0/p.amu) * 
+						n_background_cm3 / pow(T_background_eV,1.5);
 
 				// x is the dimensionless ratio of v to vTh
 				double x =  vMag_ms / vTh_ms;
 
 				double phi_x = erf ( x );	
 				// Here we use the analytic erf derivative (Phi prime)
-				double phi_x_dx = 2 / sqrt (_pi) * exp ( pow(-x,2) );
+				double phi_x_dx = 2 / sqrt (_pi) * exp ( -pow(x,2) );
 				double psi_x = ( phi_x - x * phi_x_dx ) / ( 2 * pow(x,2) );
 
 				double nu_D = 3 * sqrt (_pi/2) * nu_B * (phi_x-psi_x)/pow(x,3);
@@ -147,10 +152,20 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 				// apply pitch kick
 				
 				double pitch_1 = pitch_0 * (1-nu_D*dt) * pm * sqrt ( (1-pow(pitch_0,2)) * nu_D*dt );
-
+#if DEBUGLEVEL >= 3
 #ifndef __CUDA_ARCH__
+			printf  ("\tvMag = %f\n", sqrt(pow(p.vPer,2)+pow(p.vPar,2)));
+			printf  ("\tvPar = %f\n", w.vPar);
+			printf  ("\tvPer = %f\n", vPer);
+			printf  ("\tv = %f\n", vMag_ms);
+			printf  ("\tvTh = %f\n", vTh_ms);
 			printf  ("\tv/vTh = %f\n", x);
+			printf  ("\tphi_x = %f\n", phi_x);
+			printf  ("\tpsi_x = %f\n", psi_x);
+			printf  ("\tphi_x_dx = %e\n", phi_x_dx);
 			printf  ("\tnu_D/nu_B = %e\n", nu_D/nu_B);
+			printf  ("\tnu_D = %e\n", nu_D);
+			printf  ("\tnu_B = %e\n", nu_B);
 			printf  ("\tnu_D*dt = %e\n", nu_D*dt);
 			printf  ("\tdt: %e, dtMin: %e\n", dt, 0.1/nu_D);
 #else
@@ -159,7 +174,8 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			cuPrintf("\tnu_D*dt = %e\n", nu_D*dt);
 			cuPrintf  ("\tdt: %e, dtMin: %e\n", dt, 0.1/nu_D);
 #endif
- 
+			FLAG = 0; 
+#endif
 		}
 
 //#ifndef __PROFILING__
