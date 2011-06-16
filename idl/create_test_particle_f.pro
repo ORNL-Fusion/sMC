@@ -25,7 +25,7 @@ eqdsk   = readGEQDSK ( eqdskFName )
 
 nP    = 10000L
 n_m_3 = 4.0e19
-E_keV = 40.0
+E_keV = 100.0
 
 ; Create a template Maxwellian for a single spatial point
 
@@ -36,9 +36,9 @@ randZ	= randomN ( undefined, nP )
 T_joule = 2.0/3.0 * E_keV * 1e3 * e_
 vTh = sqrt ( 2.0 * T_joule / (mi*amu) )
 
-v_x = randX * vTh *0
-v_y = randY * vTh *0
-v_z = randZ * vTh *0 + vTh
+v_x = randX * vTh 
+v_y = randY * vTh
+v_z = randZ * vTh
 
 ; Spatial point
 
@@ -91,7 +91,7 @@ if keyword_set(plotf) then begin
 	vPar_grid = (fIndGen(nPar)/(nPar-1)-0.5)*2*parRange
 	parSize = vPar_grid[1]-vPar_grid[0]
 	
-	nPer = 20 
+	nPer = 11 
 	perRange = vTh * nThermal 
 	vPer_grid = fIndGen(nPer)/(nPer-1)*perRange
 	perSize = vPer_grid[1]-vPer_grid[0]
@@ -109,7 +109,7 @@ if keyword_set(plotf) then begin
 	
 	v_hist = v_hist * weight[0]
 	
-	contour, v_hist, vPar_grid/c*1e2, vPer_grid/c*1e2, $
+	contour, v_hist, (vPar_grid[0:-2]+parSize/2.0)/c*1e2, vPer_grid/c*1e2, $
 			xTitle = 'vPar [%c]', yTitle='vPer [%c]', $
 			levels = 10.0^fIndGen(30)*1e-15, /iso
 endif

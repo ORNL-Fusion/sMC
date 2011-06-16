@@ -15,7 +15,7 @@
 #include "C/src/simplePrintf/cuPrintf.cu"
 #endif
 
-//#define __SAVE_ORBITS__
+#define __SAVE_ORBITS__
 
 // Runge-Kutta-Fehlberg integrator
 // pg. 254 Burden and Faires
@@ -36,7 +36,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	REAL dt;
 	REAL dtMax = 1e-4;
 	REAL dtMin = 1e-9;
-	REAL EPS = 1e-3;
+	REAL EPS = 1e-5;
 	unsigned int FLAG = 1;
 
 	Crk K1, K2, K3, K4, K5, K6, R, v_ms;
@@ -121,8 +121,8 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 				double pitch_0 = w.vPar / vMag_ms;
 
-				float coulomb_log =23.0; 
-				double E_background_eV = 1.0e3;
+				float coulomb_log = 23.0; 
+				double E_background_eV = 2.0e3;
 				double T_background_eV = 2.0/3.0 * E_background_eV;
 				double n_background_cm3 = 1e13;
 

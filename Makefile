@@ -38,7 +38,7 @@ LFLAGS := -L$(NETCDFDIR)/lib -L$(CUDALIBDIR)
 LIBS := $(ALGLIBDIR)/*.o -lcuda -lcudart -lnetcdf_c++ -lnetcdf
 
 USECUDA:=#true 
-DEBUG:=4
+DEBUG:=0
 
 LINK := $(CPP) -pg
 
