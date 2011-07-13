@@ -38,6 +38,21 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	REAL dtMin = 1e-9;
 	REAL EPS = 1e-5;
 	unsigned int FLAG = 1;
+	float poloidalDistanceOld = 0;
+	float poloidalDistanceNew = 0;
+	float poloidalDistanceClosed = 1e-3;
+	float nu_B = 0;
+	float nu_D = 0, nu_D_orbitTotal = 0;
+	float nu_E = 0, nu_E_orbitTotal = 0;
+	float t_orbitTotal = 0;
+	double vMag_ms = 0, vTh_ms;
+	int gooseFac = 1;
+
+	float coulomb_log = 23.0; 
+	double E_background_eV = 2.0e3;
+	double T_background_eV = 2.0/3.0 * E_background_eV;
+	double n_background_cm3 = 1e13;
+
 
 	Crk K1, K2, K3, K4, K5, K6, R, v_ms;
 
@@ -104,8 +119,13 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 		if(R_<=TOL) {
 				// Approximation accepted
 				t += dt;
+				t_orbitTotal += dt;
 				w += 25.0/216.0*K1 + 1408.0/2565.0*K3 + 2197.0/4104.0*K4 - 1.0/5.0*K5;
 				jj++;
+
+				// Is this the end of a poloidal orbit check
+				poloidalDistanceOld = poloidalDistanceNew;
+				poloidalDistanceNew = sqrt ( pow(p.r-w.r,2)+pow(p.z-w.z,2) );
 
 				// Apply pitch angle scatter
 				// 
@@ -117,20 +137,13 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 				REAL vPer = get_vPer ( w, p.mu, textures, spans );
 
-				double vMag_ms = sqrt( pow(w.vPar,2) + pow(vPer,2) );
-
-				double pitch_0 = w.vPar / vMag_ms;
-
-				float coulomb_log = 23.0; 
-				double E_background_eV = 2.0e3;
-				double T_background_eV = 2.0/3.0 * E_background_eV;
-				double n_background_cm3 = 1e13;
+				vMag_ms = sqrt( pow(w.vPar,2) + pow(vPer,2) );
 
 				// vTh is here done in SI units since the x variable is dimensionless
-				double vTh_ms = sqrt ( 2 * T_background_eV * _e / (p.amu*_mi) );
+				vTh_ms = sqrt ( 2 * T_background_eV * _e / (p.amu*_mi) );
 
 				// cgs units here following Boozer
-				double nu_B = coulomb_log / 10.0 / 3e6 * sqrt(2.0/p.amu) * 
+				nu_B = coulomb_log / 10.0 / 3e6 * sqrt(2.0/p.amu) * 
 						n_background_cm3 / pow(T_background_eV,1.5);
 
 				// x is the dimensionless ratio of v to vTh
@@ -141,17 +154,11 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 				double phi_x_dx = 2 / sqrt (_pi) * exp ( -pow(x,2) );
 				double psi_x = ( phi_x - x * phi_x_dx ) / ( 2 * pow(x,2) );
 
-				double nu_D = 3 * sqrt (_pi/2) * nu_B * (phi_x-psi_x)/pow(x,3);
+				nu_D = 3 * sqrt (_pi/2) * nu_B * (phi_x-psi_x)/pow(x,3);
+				nu_E = 3 * sqrt (_pi/2) * nu_B * psi_x/x;
+				nu_D_orbitTotal += nu_D;
+				nu_E_orbitTotal += nu_E;
 
-				// random number generation
-
-				srand(time(0));
-				int pm = rand() % 2; // 0 or 1, i.e., odd or even
-				if(!pm) pm = -1;
-
-				// apply pitch kick
-				
-				double pitch_1 = pitch_0 * (1-nu_D*dt) * pm * sqrt ( (1-pow(pitch_0,2)) * nu_D*dt );
 #if DEBUGLEVEL >= 3
 #ifndef __CUDA_ARCH__
 			printf  ("\tvMag = %f\n", sqrt(pow(p.vPer,2)+pow(p.vPar,2)));
@@ -226,6 +233,80 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 #endif
 			dt = dtMin;
 			FLAG = 0;
+		}
+
+
+		// Adjust dt such that the poloidal steps are within poloidalDistanceClosed
+		if(fabs(poloidalDistanceNew-poloidalDistanceOld)>=poloidalDistanceClosed) {
+			dt = 0.95 * dt * poloidalDistanceClosed/fabs(poloidalDistanceNew-poloidalDistanceOld);
+		}
+
+		// Force stop after a single poloidal orbit
+		if(R_<=TOL) {
+		if(poloidalDistanceNew-poloidalDistanceOld<0 
+						&& w.vPar*p.vPar>0
+						&& poloidalDistanceNew<=dt*sqrt(pow(v_ms.r,2)+pow(v_ms.z,2)) ) {
+			if(poloidalDistanceNew<poloidalDistanceClosed){
+
+				// Calculate the goose-ing factor
+				gooseFac = 0.1/(nu_D_orbitTotal*t_orbitTotal);
+				if(0.1/(nu_E_orbitTotal*t_orbitTotal)<gooseFac)
+						gooseFac = 0.1/(nu_E_orbitTotal*t_orbitTotal);
+
+				t += (gooseFac-1)*t_orbitTotal;
+				FLAG = 0;
+
+				// random number generation
+				srand(time(0));
+				int pm = rand() % 2; // 0 or 1, i.e., odd or even
+				if(!pm) pm = -1;
+
+				// apply pitch diffusion
+				double pitch_0 = w.vPar / vMag_ms;
+				double pitch_1 = pitch_0 * (1-nu_D*t_orbitTotal*gooseFac) 
+						+ pm * sqrt ( (1-pow(pitch_0,2)) * nu_D*t_orbitTotal*gooseFac );
+
+				// Apply energy diffusion 
+				double energy_0_eV = 0.5 * p.amu*_mi * pow(vMag_ms,2) / _e;
+
+				// Numerical evaluation of the dnu_E_dE term
+				// See comments in the nu_D & nu_E section
+				double dE_eV = energy_0_eV * 0.05;
+				double v1 = sqrt ( 2 * (energy_0_eV - dE_eV) * _e / (p.amu*_mi) );
+				double v2 = sqrt ( 2 * (energy_0_eV + dE_eV) * _e / (p.amu*_mi) );
+				double x1 =  v1 / vTh_ms;
+				double x2 =  v2 / vTh_ms;
+
+				double phi_x1 = erf ( x1 );	
+				double phi_x1_dx = 2 / sqrt (_pi) * exp ( -pow(x1,2) );
+				double psi_x1 = ( phi_x1 - x1 * phi_x1_dx ) / ( 2 * pow(x1,2) );
+
+				double phi_x2 = erf ( x2 );	
+				double phi_x2_dx = 2 / sqrt (_pi) * exp ( -pow(x2,2) );
+				double psi_x2 = ( phi_x2 - x2 * phi_x2_dx ) / ( 2 * pow(x2,2) );
+
+				double nu_E1 = 3 * sqrt (_pi/2) * nu_B * psi_x1/x1;
+				double nu_E2 = 3 * sqrt (_pi/2) * nu_B * psi_x2/x2;
+
+				double dnu_E_dE = (nu_E2 - nu_E1) / ( 2 * dE_eV );
+
+				double energy_1_eV = energy_0_eV - (2*nu_E*t_orbitTotal*gooseFac) * 
+						(energy_0_eV - (3.0/2.0 + energy_0_eV / nu_E * dnu_E_dE)*T_background_eV)
+						+ pm*2*sqrt(T_background_eV*energy_0_eV*(nu_E*t_orbitTotal*gooseFac));
+
+				printf("nu_D*dt: %e\n",nu_D_orbitTotal*t_orbitTotal);
+				printf("nu_E*dt: %e\n",nu_E_orbitTotal*t_orbitTotal);
+				printf("gooseFac: %i\n", gooseFac);
+				printf("energy0[eV]: %e\n", energy_0_eV);
+				printf("energy1[eV]: %e\n", energy_1_eV);
+				printf("pitch0: %f\n", pitch_0);
+				printf("pitch1: %f\n", pitch_1);
+			}
+			else {
+				dt=0.95*poloidalDistanceNew/sqrt(pow(v_ms.r,2)+pow(v_ms.z,2));
+			}
+
+		}
 		}
 
 		ii++;
