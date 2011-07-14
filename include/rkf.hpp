@@ -32,27 +32,33 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
  	unsigned int ii = 0, jj = 0;	
 	int err = 0;
 	REAL t = 0.0;
-	REAL runTime = 1e-3;
+	REAL runTime = 1e-2;
 	REAL dt;
 	REAL dtMax = 1e-4;
 	REAL dtMin = 1e-9;
 	REAL EPS = 1e-5;
 	unsigned int FLAG = 1;
+
+	// Single poloidal orbit vars
 	float poloidalDistanceOld = 0;
 	float poloidalDistanceNew = 0;
 	float poloidalDistanceClosed = 1e-3;
+	int gooseFac = 1;
+
+	// Diffusion vars
 	float nu_B = 0;
 	float nu_D = 0, nu_D_orbitTotal = 0;
 	float nu_E = 0, nu_E_orbitTotal = 0;
 	float t_orbitTotal = 0;
 	double vMag_ms = 0, vTh_ms;
-	int gooseFac = 1;
-
 	float coulomb_log = 23.0; 
 	double E_background_eV = 2.0e3;
 	double T_background_eV = 2.0/3.0 * E_background_eV;
 	double n_background_cm3 = 1e13;
 
+	// random number generation
+	srand(time(NULL));
+	int pm = 0;
 
 	Crk K1, K2, K3, K4, K5, K6, R, v_ms;
 
@@ -135,9 +141,9 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 				v_ms = vGC ( 0.0, w, p.mu, textures, spans, err );
 
-				REAL vPer = get_vPer ( w, p.mu, textures, spans );
+				REAL vPer_ms = get_vPer ( w, p.mu, textures, spans );
 
-				vMag_ms = sqrt( pow(w.vPar,2) + pow(vPer,2) );
+				vMag_ms = sqrt( pow(w.vPar,2) + pow(vPer_ms,2) );
 
 				// vTh is here done in SI units since the x variable is dimensionless
 				vTh_ms = sqrt ( 2 * T_background_eV * _e / (p.amu*_mi) );
@@ -163,7 +169,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 #ifndef __CUDA_ARCH__
 			printf  ("\tvMag = %f\n", sqrt(pow(p.vPer,2)+pow(p.vPar,2)));
 			printf  ("\tvPar = %f\n", w.vPar);
-			printf  ("\tvPer = %f\n", vPer);
+			printf  ("\tvPer = %f\n", vPer_ms);
 			printf  ("\tv = %f\n", vMag_ms);
 			printf  ("\tvTh = %f\n", vTh_ms);
 			printf  ("\tv/vTh = %f\n", x);
@@ -253,20 +259,31 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 				if(0.1/(nu_E_orbitTotal*t_orbitTotal)<gooseFac)
 						gooseFac = 0.1/(nu_E_orbitTotal*t_orbitTotal);
 
-				t += (gooseFac-1)*t_orbitTotal;
-				FLAG = 0;
+				// Ensure the goose-ing does not push the particle past "runTime"
+				if(t+(gooseFac-1)*t_orbitTotal>runTime) {
+					int gooseFacAdj = (runTime-t)/t_orbitTotal;
+					printf("Adjusting goose-ing factor from %i to %i\n",gooseFac,gooseFacAdj);
+					gooseFac = gooseFacAdj;
+				}
 
-				// random number generation
-				srand(time(0));
-				int pm = rand() % 2; // 0 or 1, i.e., odd or even
-				if(!pm) pm = -1;
+				if(gooseFac<1) {
+					printf("Adjusting goose-ing factor from %i to %i\n",gooseFac,1);
+					gooseFac = 1;
+				}
+				t += (gooseFac-1)*t_orbitTotal;
+
+				//FLAG = 0;
 
 				// apply pitch diffusion
+				pm = rand() % 2; // 0 or 1, i.e., odd or even
+				if(!pm) pm = -1;
 				double pitch_0 = w.vPar / vMag_ms;
 				double pitch_1 = pitch_0 * (1-nu_D*t_orbitTotal*gooseFac) 
 						+ pm * sqrt ( (1-pow(pitch_0,2)) * nu_D*t_orbitTotal*gooseFac );
 
 				// Apply energy diffusion 
+				pm = rand() % 2; // 0 or 1, i.e., odd or even
+				if(!pm) pm = -1;
 				double energy_0_eV = 0.5 * p.amu*_mi * pow(vMag_ms,2) / _e;
 
 				// Numerical evaluation of the dnu_E_dE term
@@ -294,6 +311,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 						(energy_0_eV - (3.0/2.0 + energy_0_eV / nu_E * dnu_E_dE)*T_background_eV)
 						+ pm*2*sqrt(T_background_eV*energy_0_eV*(nu_E*t_orbitTotal*gooseFac));
 
+				printf("t: %f\n",t);
 				printf("nu_D*dt: %e\n",nu_D_orbitTotal*t_orbitTotal);
 				printf("nu_E*dt: %e\n",nu_E_orbitTotal*t_orbitTotal);
 				printf("gooseFac: %i\n", gooseFac);
@@ -301,6 +319,26 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 				printf("energy1[eV]: %e\n", energy_1_eV);
 				printf("pitch0: %f\n", pitch_0);
 				printf("pitch1: %f\n", pitch_1);
+				printf("poloidalDistanceNew: %f\n",poloidalDistanceNew);
+
+				t_orbitTotal = 0;
+				nu_D_orbitTotal = 0;
+				nu_E_orbitTotal = 0;
+
+				// Update particle with new vPar and mu
+				double vMag_ms_1 = sqrt ( 2 * energy_1_eV * _e / (p.amu*_mi) );
+				double vPar_ms_1 = vMag_ms_1 * pitch_1;
+				double vPerSq_ms_1 = pow(vMag_ms_1,2)-pow(vPar_ms_1,2);
+				REAL vPer_ms = get_vPer ( w, p.mu, textures, spans );
+				float B_T = (p.amu*_mi*pow(vPer_ms,2))/(p.mu * 2);
+				double mu_1 = (p.amu*_mi) * vPerSq_ms_1 / ( 2 * B_T );
+
+				printf("vPar_0: %e, vPar_1: %e\n", w.vPar, vPar_ms_1);
+				printf("mu_0: %e, mu_1: %e\n", p.mu, mu_1);
+
+				p.mu = mu_1;
+				w.vPar = vPar_ms_1;
+
 			}
 			else {
 				dt=0.95*poloidalDistanceNew/sqrt(pow(v_ms.r,2)+pow(v_ms.z,2));
