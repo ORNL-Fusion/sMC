@@ -116,16 +116,16 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 	    if(index.stat>=1) {
             err++;
 #ifndef __CUDA_ARCH__
-			std::cout << "\tget_index() result off grid:" << std::endl;
-			printf("p.r: %f, p.z: %f\n",p.r,p.z);
-			printf("spans.mfront: %f, spans.mback: %f, spans.nfront: %f, spans.nback %f, spans.NROW: %i, spans.NCOL: %i\n", 
+			std::cout << "\t\tget_index() result off grid:" << std::endl;
+			printf("\t\tp.r: %f, p.z: %f\n",p.r,p.z);
+			printf("\t\tspans.mfront: %f, spans.mback: %f, spans.nfront: %f, spans.nback %f, spans.NROW: %i, spans.NCOL: %i\n", 
 							spans.mfront, spans.mback, spans.nfront, spans.nback, 
 							spans.NROW, spans.NCOL);
 #else
-			cuPrintf("get_index() result off grid: %i %i %i %i %f %f\n", 
+			cuPrintf("\t\tget_index() result off grid: %i %i %i %i %f %f\n", 
 							index.m1, index.m2, index.n1, index.n2, index.m, index.n);
-			cuPrintf("p.r: %f, p.z: %f\n",p.r,p.z);
-			cuPrintf("spans.mfront: %f, spans.mback: %f, spans.nfront: %f, spans.nback %f, spans.NROW: %i, spans.NCOL: %i\n", 
+			cuPrintf("\t\tp.r: %f, p.z: %f\n",p.r,p.z);
+			cuPrintf("\t\tspans.mfront: %f, spans.mback: %f, spans.nfront: %f, spans.nback %f, spans.NROW: %i, spans.NCOL: %i\n", 
 							spans.mfront, spans.mback, spans.nfront, spans.nback, 
 							spans.NROW, spans.NCOL);
 #endif
@@ -194,9 +194,9 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
 	    vGC.p = p.vPar * unitb_p + pow(vPer,2) * bGrad_p + pow(p.vPar,2) * bCurv_p;
 	    vGC.z = p.vPar * unitb_z + pow(vPer,2) * bGrad_z + pow(p.vPar,2) * bCurv_z;
 
-#if DEBUGLEVEL >= 4
-		printf("v_r: %f, v_p: %f, v_z: %f\n", vGC.r, vGC.p, vGC.z);
-		printf("vPer: %f, vPar: %f\n", vPer, p.vPar);
+#if DEBUGLEVEL >= 5
+		printf("\t\t\tv_r: %f, v_p: %f, v_z: %f\n", vGC.r, vGC.p, vGC.z);
+		printf("\t\t\tvPer: %f, vPar: %f\n", vPer, p.vPar);
 #endif
 
 

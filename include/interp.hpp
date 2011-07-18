@@ -68,6 +68,27 @@ CinterpIndex get_index ( const REAL mIn, const REAL nIn, const CinterpSpans &spa
     // Check if particle is off grid	
     if( index.m1<0 || index.m2>=(spans.NROW-1) || index.n1<0 || index.n2>=(spans.NCOL-1) ) {
         index.stat+=1;
+#if DEBUGLEVEL >= 1
+#ifndef __CUDA_ARCH__
+		printf("\t\tmIn: %f\n",mIn);
+		printf("\t\tnIn: %f\n",nIn);
+		printf("\t\tindex.m: %f\n",index.m);
+		printf("\t\tindex.n: %f\n",index.n);
+		printf("\t\tindex.m1: %i\n",index.m1);
+		printf("\t\tindex.m2: %i\n",index.m2);
+		printf("\t\tindex.n1: %i\n",index.n1);
+		printf("\t\tindex.n2: %i\n",index.n2);
+#else
+		cuPrintf("\t\tmIn: %f\n",mIn);
+		cuPrintf("\t\tnIn: %f\n",nIn);
+		cuPrintf("\t\tindex.m: %f\n",index.m);
+		cuPrintf("\t\tindex.n: %f\n",index.n);
+		cuPrintf("\t\tindex.m1: %i\n",index.m1);
+		cuPrintf("\t\tindex.m2: %i\n",index.m2);
+		cuPrintf("\t\tindex.n1: %i\n",index.n1);
+		cuPrintf("\t\tindex.n2: %i\n",index.n2);
+#endif
+#endif
     }
 
 	return index;

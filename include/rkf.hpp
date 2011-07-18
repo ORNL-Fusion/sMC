@@ -32,7 +32,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
  	unsigned int ii = 0, jj = 0;	
 	int err = 0;
 	REAL t = 0.0;
-	REAL runTime = 1e-2;
+	REAL runTime = 1e-1;
 	REAL dt;
 	REAL dtMax = 1e-4;
 	REAL dtMin = 1e-9;
@@ -43,12 +43,17 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	float poloidalDistanceOld = 0;
 	float poloidalDistanceNew = 0;
 	float poloidalDistanceClosed = 1e-3;
+	float poloidalStart_r = p.r;
+	float poloidalStart_z = p.z;
+	float poloidalStart_vPar = p.vPar;
 	int gooseFac = 1;
+	int poloidalPoints = 0;
+	int nPoloidalOrbits = 0;
 
 	// Diffusion vars
 	float nu_B = 0;
-	float nu_D = 0, nu_D_orbitTotal = 0;
-	float nu_E = 0, nu_E_orbitTotal = 0;
+	float nu_D = 0, nu_D_orbitTotal = 0, nu_D_dt_orbitTotal=0;
+	float nu_E = 0, nu_E_orbitTotal = 0, nu_E_dt_orbitTotal=0;
 	float t_orbitTotal = 0;
 	double vMag_ms = 0, vTh_ms;
 	float coulomb_log = 23.0; 
@@ -106,12 +111,14 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 		if(err) {
 			p.status = err;
+			FLAG = 0;
 #ifndef __CUDA_ARCH__
 			std::cout << "\tParticle lost." << std::endl;
 #else
 			cuPrintf("\tParticle lost, err = %i\n", err);
 #endif
-            return err;
+            //return err;
+			break;
 		}
 
 		R = Kabs ( 1.0/360.0*K1 - 128.0/4275.0*K3 - 2197.0/75240.0*K4 + 1.0/50.0*K5 + 2.0/55.0*K6 ) / dt;
@@ -126,13 +133,20 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 				// Approximation accepted
 				t += dt;
 				t_orbitTotal += dt;
+				poloidalPoints++;
 				w += 25.0/216.0*K1 + 1408.0/2565.0*K3 + 2197.0/4104.0*K4 - 1.0/5.0*K5;
 				jj++;
 
 				// Is this the end of a poloidal orbit check
 				poloidalDistanceOld = poloidalDistanceNew;
-				poloidalDistanceNew = sqrt ( pow(p.r-w.r,2)+pow(p.z-w.z,2) );
-
+				poloidalDistanceNew = sqrt ( pow(poloidalStart_r-w.r,2)+pow(poloidalStart_z-w.z,2) );
+#if DEBUGLEVEL >= 4
+#ifndef __CUDA_ARCH__
+				printf("\t\tPoloidalDistance: %f\n", poloidalDistanceNew );
+#else
+				cuPrintf("\t\tPoloidalDistance: %f\n", poloidalDistanceNew );
+#endif
+#endif
 				// Apply pitch angle scatter
 				// 
 				// Monte-Carlo evaluation of transport coefficients
@@ -164,8 +178,10 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 				nu_E = 3 * sqrt (_pi/2) * nu_B * psi_x/x;
 				nu_D_orbitTotal += nu_D;
 				nu_E_orbitTotal += nu_E;
+				nu_D_dt_orbitTotal += nu_D*dt;
+				nu_E_dt_orbitTotal += nu_E*dt;
 
-#if DEBUGLEVEL >= 3
+#if DEBUGLEVEL >= 4
 #ifndef __CUDA_ARCH__
 			printf  ("\tvMag = %f\n", sqrt(pow(p.vPer,2)+pow(p.vPar,2)));
 			printf  ("\tvPar = %f\n", w.vPar);
@@ -187,7 +203,6 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			cuPrintf("\tnu_D*dt = %e\n", nu_D*dt);
 			cuPrintf  ("\tdt: %e, dtMin: %e\n", dt, 0.1/nu_D);
 #endif
-			FLAG = 0; 
 #endif
 		}
 
@@ -223,19 +238,19 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 		}
 		else if(dt<dtMin || dt!=dt) {
 #ifndef __CUDA_ARCH__
-			printf("dtMin reached: %e, %e\n",dt,dtMin);
-			printf("delta: %f\n",delta);
-			printf("R_: %e\n",R_);
-			printf("TOL: %f\n",TOL);
-			printf("vPer: %f\n",p.vPer);
-			printf("eV: %f\n",p.energy_eV);
+			printf("\t\tdtMin reached: %e, %e\n",dt,dtMin);
+			printf("\t\tdelta: %f\n",delta);
+			printf("\t\tR_: %e\n",R_);
+			printf("\t\tTOL: %f\n",TOL);
+			printf("\t\tvPer: %f\n",p.vPer);
+			printf("\t\teV: %f\n",p.energy_eV);
 #else
-			cuPrintf("dtMin reached: %e, %e\n",dt,dtMin);
-			cuPrintf("delta: %f\n",delta);
-			cuPrintf("R_: %e\n",R_);
-			cuPrintf("TOL: %f\n",TOL);
-			cuPrintf("vPer: %f\n",p.vPer);
-			cuPrintf("eV: %f\n",p.energy_eV);
+			cuPrintf("\t\tdtMin reached: %e, %e\n",dt,dtMin);
+			cuPrintf("\t\tdelta: %f\n",delta);
+			cuPrintf("\t\tR_: %e\n",R_);
+			cuPrintf("\t\tTOL: %f\n",TOL);
+			cuPrintf("\t\tvPer: %f\n",p.vPer);
+			cuPrintf("\t\teV: %f\n",p.energy_eV);
 #endif
 			dt = dtMin;
 			FLAG = 0;
@@ -250,37 +265,64 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 		// Force stop after a single poloidal orbit
 		if(R_<=TOL) {
 		if(poloidalDistanceNew-poloidalDistanceOld<0 
-						&& w.vPar*p.vPar>0
+						&& w.vPar*poloidalStart_vPar>0
 						&& poloidalDistanceNew<=dt*sqrt(pow(v_ms.r,2)+pow(v_ms.z,2)) ) {
 			if(poloidalDistanceNew<poloidalDistanceClosed){
 
 				// Calculate the goose-ing factor
-				gooseFac = 0.1/(nu_D_orbitTotal*t_orbitTotal);
-				if(0.1/(nu_E_orbitTotal*t_orbitTotal)<gooseFac)
-						gooseFac = 0.1/(nu_E_orbitTotal*t_orbitTotal);
+				gooseFac = 0.1/(nu_D_dt_orbitTotal);
+				if(0.1/(nu_E_dt_orbitTotal)<gooseFac)
+						gooseFac = 0.1/(nu_E_dt_orbitTotal);
 
 				// Ensure the goose-ing does not push the particle past "runTime"
 				if(t+(gooseFac-1)*t_orbitTotal>runTime) {
 					int gooseFacAdj = (runTime-t)/t_orbitTotal;
-					printf("Adjusting goose-ing factor from %i to %i\n",gooseFac,gooseFacAdj);
+#if DEBUGLEVEL >= 3
+#ifndef __CUDA_ARCH__
+					printf("\t\n");
+					printf("\tAdjusting goose-ing factor from %i to %i\n",gooseFac,gooseFacAdj);
+					printf("\tt_orbitTotal: %e\n",t_orbitTotal);
+					printf("\tdt: %e\n",dt);
+					printf("\tpoloidalDistanceOld: %f\n",poloidalDistanceOld);
+					printf("\tpoloidalDistanceNew: %f\n",poloidalDistanceNew);
+#else
+					printf("\t\n");
+					cuPrintf("\tAdjusting goose-ing factor from %i to %i\n",gooseFac,gooseFacAdj);
+					cuPrintf("\tt_orbitTotal: %e\n",t_orbitTotal);
+					cuPrintf("\tdt: %e\n",dt);
+					cuPrintf("\tpoloidalDistanceOld: %f\n",poloidalDistanceOld);
+					cuPrintf("\tpoloidalDistanceNew: %f\n",poloidalDistanceNew);
+#endif
+#endif
+					if(t_orbitTotal<dt) exit(0);
 					gooseFac = gooseFacAdj;
 				}
 
 				if(gooseFac<1) {
-					printf("Adjusting goose-ing factor from %i to %i\n",gooseFac,1);
+#if DEBUGLEVEL >= 3
+#ifndef __CUDA_ARCH__
+					printf("\tAdjusting goose-ing factor from %i to %i\n",gooseFac,1);
+					printf("\tdt: %e\n",dt);
+#else
+					cuPrintf("\tAdjusting goose-ing factor from %i to %i\n",gooseFac,1);
+					cuPrintf("\tdt: %e\n",dt);
+#endif
+#endif
 					gooseFac = 1;
 				}
 				t += (gooseFac-1)*t_orbitTotal;
-
-				//FLAG = 0;
+				nPoloidalOrbits++;
 
 				// apply pitch diffusion
 				pm = rand() % 2; // 0 or 1, i.e., odd or even
 				if(!pm) pm = -1;
 				double pitch_0 = w.vPar / vMag_ms;
-				double pitch_1 = pitch_0 * (1-nu_D*t_orbitTotal*gooseFac) 
-						+ pm * sqrt ( (1-pow(pitch_0,2)) * nu_D*t_orbitTotal*gooseFac );
-
+#if PITCH_SCATTERING >= 1
+				double pitch_1 = pitch_0 * (1-nu_D_dt_orbitTotal*gooseFac) 
+						+ pm * sqrt ( (1-pow(pitch_0,2)) * nu_D_dt_orbitTotal*gooseFac );
+#else
+				double pitch_1 = pitch_0;
+#endif
 				// Apply energy diffusion 
 				pm = rand() % 2; // 0 or 1, i.e., odd or even
 				if(!pm) pm = -1;
@@ -307,24 +349,49 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 				double dnu_E_dE = (nu_E2 - nu_E1) / ( 2 * dE_eV );
 
-				double energy_1_eV = energy_0_eV - (2*nu_E*t_orbitTotal*gooseFac) * 
+#if ENERGY_SCATTERING >= 1
+				double energy_1_eV = energy_0_eV - (2*nu_E_dt_orbitTotal*gooseFac) * 
 						(energy_0_eV - (3.0/2.0 + energy_0_eV / nu_E * dnu_E_dE)*T_background_eV)
-						+ pm*2*sqrt(T_background_eV*energy_0_eV*(nu_E*t_orbitTotal*gooseFac));
+						+ pm*2*sqrt(T_background_eV*energy_0_eV*(nu_E_dt_orbitTotal*gooseFac));
+#else
+				double energy_1_eV = energy_0_eV;
+#endif
 
-				printf("t: %f\n",t);
-				printf("nu_D*dt: %e\n",nu_D_orbitTotal*t_orbitTotal);
-				printf("nu_E*dt: %e\n",nu_E_orbitTotal*t_orbitTotal);
-				printf("gooseFac: %i\n", gooseFac);
-				printf("energy0[eV]: %e\n", energy_0_eV);
-				printf("energy1[eV]: %e\n", energy_1_eV);
-				printf("pitch0: %f\n", pitch_0);
-				printf("pitch1: %f\n", pitch_1);
-				printf("poloidalDistanceNew: %f\n",poloidalDistanceNew);
-
-				t_orbitTotal = 0;
-				nu_D_orbitTotal = 0;
-				nu_E_orbitTotal = 0;
-
+#if DEBUGLEVEL >= 3
+#ifndef __CUDA_ARCH__
+				printf("\t\n");
+				printf("\tt: %f\n",t);
+				printf("\tdt: %e\n",dt);
+				printf("\tt_orbitTotal: %e\n",t_orbitTotal);
+				printf("\tnu_D*dt: %e\n",nu_D_orbitTotal*t_orbitTotal);
+				printf("\tnu_E*dt: %e\n",nu_E_orbitTotal*t_orbitTotal);
+				printf("\tnu_D_dt: %e\n",nu_D_dt_orbitTotal);
+				printf("\tnu_E_dt: %e\n",nu_E_dt_orbitTotal);
+				printf("\tgooseFac: %i\n", gooseFac);
+				printf("\tenergy0[eV]: %e\n", energy_0_eV);
+				printf("\tenergy1[eV]: %e\n", energy_1_eV);
+				printf("\tpitch0: %f\n", pitch_0);
+				printf("\tpitch1: %f\n", pitch_1);
+				printf("\tpoloidalDistanceOld: %f\n",poloidalDistanceOld);
+				printf("\tpoloidalDistanceNew: %f\n",poloidalDistanceNew);
+				printf("\tpoloidalPoints: %i\n",poloidalPoints);
+#else
+				printf("\t\n");
+				cuPrintf("\tt: %f\n",t);
+				cuPrintf("\tdt: %e\n",dt);
+				cuPrintf("\tt_orbitTotal: %e\n",t_orbitTotal);
+				cuPrintf("\tnu_D*dt: %e\n",nu_D_orbitTotal*t_orbitTotal);
+				cuPrintf("\tnu_E*dt: %e\n",nu_E_orbitTotal*t_orbitTotal);
+				cuPrintf("\tgooseFac: %i\n", gooseFac);
+				cuPrintf("\tenergy0[eV]: %e\n", energy_0_eV);
+				cuPrintf("\tenergy1[eV]: %e\n", energy_1_eV);
+				cuPrintf("\tpitch0: %f\n", pitch_0);
+				cuPrintf("\tpitch1: %f\n", pitch_1);
+				cuPrintf("\tpoloidalDistanceOld: %f\n",poloidalDistanceOld);
+				cuPrintf("\tpoloidalDistanceNew: %f\n",poloidalDistanceNew);
+				cuPrintf("\tpoloidalPoints: %i\n",poloidalPoints);
+#endif
+#endif
 				// Update particle with new vPar and mu
 				double vMag_ms_1 = sqrt ( 2 * energy_1_eV * _e / (p.amu*_mi) );
 				double vPar_ms_1 = vMag_ms_1 * pitch_1;
@@ -333,11 +400,33 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 				float B_T = (p.amu*_mi*pow(vPer_ms,2))/(p.mu * 2);
 				double mu_1 = (p.amu*_mi) * vPerSq_ms_1 / ( 2 * B_T );
 
-				printf("vPar_0: %e, vPar_1: %e\n", w.vPar, vPar_ms_1);
-				printf("mu_0: %e, mu_1: %e\n", p.mu, mu_1);
-
+#if DEBUGLEVEL >= 3
+#ifndef __CUDA_ARCH_
+				printf("\tvPar_0: %e, vPar_1: %e\n", w.vPar, vPar_ms_1);
+				printf("\tmu_0: %e, mu_1: %e\n", p.mu, mu_1);
+#else
+				cuPrintf("\tvPar_0: %e, vPar_1: %e\n", w.vPar, vPar_ms_1);
+				cuPrintf("\tmu_0: %e, mu_1: %e\n", p.mu, mu_1);
+#endif
+#endif
 				p.mu = mu_1;
 				w.vPar = vPar_ms_1;
+
+				t_orbitTotal = 0;
+				nu_D_orbitTotal = 0;
+				nu_E_orbitTotal = 0;
+				nu_D_dt_orbitTotal = 0;
+				nu_E_dt_orbitTotal = 0;
+				dt = dtMin;
+
+				// Update the position with which respect to we test for poloidal orbit completion
+
+				poloidalStart_r = w.r;
+				poloidalStart_z = w.z;
+				poloidalStart_vPar = w.vPar;
+				poloidalDistanceOld = poloidalDistanceNew;
+				poloidalDistanceNew = 0;
+				poloidalPoints = 0;
 
 			}
 			else {
@@ -364,10 +453,22 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	p.z = w.z; 
 	p.vPar = w.vPar;
 
+#if DEBUGLEVEL >= 1
 #ifndef __CUDA_ARCH__
-	std::cout << "\t nSteps: " << ii <<" with "<< jj << " accepted."<< std::endl;
+	printf("\n");
+	std::cout << "\tnSteps: " << ii <<" with "<< jj << " accepted."<< std::endl;
 #else
+	cuPrintf("\n");
     cuPrintf("nSteps: %i with %i accepted.\n", ii,jj);
+#endif
+#endif
+
+#if DEBUGLEVEL >= 2
+#ifndef __CUDA_ARCH__
+	printf("\tnPoloidalOrbits: %i\n", nPoloidalOrbits);
+#else
+	cuPrintf("\tnPoloidalOrbits: %i\n", nPoloidalOrbits);
+#endif
 #endif
 
 #ifndef __CUDA_ARCH__

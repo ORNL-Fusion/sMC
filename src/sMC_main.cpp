@@ -76,7 +76,7 @@ int main ()
 	time_t startTime, endTime;
 	startTime = time ( NULL );
 
-	for(unsigned int p=0;p<10;p++) {
+	for(unsigned int p=5;p<6;p++) {
 
 		if(!particles[p].status) {
 
