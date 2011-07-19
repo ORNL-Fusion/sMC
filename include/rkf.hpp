@@ -79,6 +79,46 @@ float newEnergy ( float energy_0_eV, float vTh_ms, int amu, float T_background_e
 	return energy_1_eV;
 }
 
+// Calculate vPer given position and mu
+
+#ifdef __CUDACC__
+__host__ __device__
+#endif
+REAL get_vPer_ms ( const Crk &w, const Cgc_particle &p, const Ctextures &textures, const CinterpSpans &spans ) {
+
+	    CinterpIndex index;
+	    index = get_index (w.z,w.r,spans);
+        REAL bmag = bilinear_interp ( index, textures.bmag );
+	    return sqrtf ( 2.0 * p.mu * bmag / (p.amu*_mi) );
+}
+
+#ifdef __CUDACC__
+__host__ __device__ 
+#endif
+void update_vPar_and_mu ( float pitch_1, float energy_1_eV, const float vPer_ms_0, Crk &w, Cgc_particle &p ) {
+
+#if DEBUGLEVEL >= 5
+	double vPar_0 = w.vPar;
+	double mu_0 = p.mu;
+#endif
+
+	// Update vPar
+	double vMag_ms_1 = sqrt ( 2 * energy_1_eV * _e / (p.amu*_mi) );
+	w.vPar = vMag_ms_1 * pitch_1;
+
+	// Update mu
+	double vPerSq_ms_1 = pow(vMag_ms_1,2)-pow(w.vPar,2);
+	// Use the old vPer and mu to calculate B_T
+	float B_T = (p.amu*_mi*pow(vPer_ms_0,2))/(p.mu * 2);
+
+	p.mu = (p.amu*_mi) * vPerSq_ms_1 / ( 2 * B_T );
+
+#if DEBUGLEVEL >= 5
+	PRINT("\t\t\tvPar_0: %e, vPar_1: %e\n", vPar_0, w.vPar);
+	PRINT("\t\t\tmu_0: %e, mu_1: %e\n", mu_0, p.mu);
+#endif
+}
+
 #ifdef __CUDACC__
 __host__ __device__
 #endif
@@ -89,7 +129,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
  	unsigned int ii = 0, jj = 0;	
 	int err = 0;
 	REAL t = 0.0;
-	REAL runTime = 1e-2;
+	REAL runTime = 1e-1;
 	REAL dt;
 	REAL dtMax = 1e-4;
 	REAL dtMin = 1e-9;
@@ -100,13 +140,13 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	float poloidalDistanceOld = 0;
 	float poloidalDistanceNew = 0;
 	float poloidalDistanceClosed = 1e-3;
-	float poloidalStart_r = p.r;
-	float poloidalStart_z = p.z;
-	float poloidalStart_vPar = p.vPar;
+	Crk poloidalStart(p.r,p.p,p.z,p.vPar);
 	int gooseFac = 1;
+	bool goose = true;
 	float nu_dt_max = 0.01;
 	int poloidalPoints = 0;
 	int nPoloidalOrbits = 0;
+	float t_poloidalStart = 0;
 
 	// Diffusion vars
 	float nu_B = 0;
@@ -190,9 +230,8 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			w += 25.0/216.0*K1 + 1408.0/2565.0*K3 + 2197.0/4104.0*K4 - 1.0/5.0*K5;
 			jj++;
 
-			// Is this the end of a poloidal orbit check
 			poloidalDistanceOld = poloidalDistanceNew;
-			poloidalDistanceNew = sqrt ( pow(poloidalStart_r-w.r,2)+pow(poloidalStart_z-w.z,2) );
+			poloidalDistanceNew = sqrt ( pow(poloidalStart.r-w.r,2)+pow(poloidalStart.z-w.z,2) );
 #if DEBUGLEVEL >= 4
 			PRINT("\t\tPoloidalDistance: %f\n", poloidalDistanceNew );
 #endif
@@ -204,9 +243,9 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 			v_ms = vGC ( 0.0, w, p.mu, textures, spans, err );
 
-			REAL vPer_ms = get_vPer ( w, p.mu, textures, spans );
+			REAL vPer_ms_0 = get_vPer_ms ( w, p, textures, spans );
 
-			vMag_ms = sqrt( pow(w.vPar,2) + pow(vPer_ms,2) );
+			vMag_ms = sqrt( pow(w.vPar,2) + pow(vPer_ms_0,2) );
 
 			// vTh is here done in SI units since the x variable is dimensionless
 			vTh_ms = sqrt ( 2 * T_background_eV * _e / (p.amu*_mi) );
@@ -228,10 +267,30 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			nu_D_dt_orbitTotal += nu_D*dt;
 			nu_E_dt_orbitTotal += nu_E*dt;
 
+			if(!goose) {
+				double pitch_0 = w.vPar / vMag_ms;
+#if PITCH_SCATTERING >= 1
+				double pitch_1 = newPitch ( pitch_0, nu_D_dt_orbitTotal*gooseFac );
+#else
+				double pitch_1 = pitch_0;
+#endif
+
+				double energy_0_eV = 0.5 * p.amu*_mi * pow(vMag_ms,2) / _e;
+#if ENERGY_SCATTERING >= 1
+				double energy_1_eV = 
+						newEnergy ( energy_0_eV, vTh_ms, p.amu, T_background_eV, nu_B, nu_E, 
+										nu_E_dt_orbitTotal*gooseFac );
+#else
+				double energy_1_eV = energy_0_eV;
+#endif
+
+				REAL vPer_ms_0 = get_vPer_ms ( w, p, textures, spans );
+				update_vPar_and_mu ( pitch_1, energy_1_eV, vPer_ms_0, w, p );
+			}
 #if DEBUGLEVEL >= 4
 			PRINT("\tvMag = %f\n", sqrt(pow(p.vPer,2)+pow(p.vPar,2)));
 			PRINT("\tvPar = %f\n", w.vPar);
-			PRINT("\tvPer = %f\n", vPer_ms);
+			PRINT("\tvPer = %f\n", vPer_ms_0);
 			PRINT("\tv = %f\n", vMag_ms);
 			PRINT("\tvTh = %f\n", vTh_ms);
 			PRINT("\tv/vTh = %f\n", x);
@@ -261,7 +320,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 		// Catch max dt
 		if(dt>dtMax) {
 			PRINT("dtMax reached: %f, %f\n",dt,dtMax);
-		dt = dtMax;
+			dt = dtMax;
 		}
 
 		// End of desired time
@@ -285,16 +344,16 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 
 		// Adjust dt such that the poloidal steps are within poloidalDistanceClosed
-		if(fabs(poloidalDistanceNew-poloidalDistanceOld)>=poloidalDistanceClosed) {
+		if(fabs(poloidalDistanceNew-poloidalDistanceOld)>=poloidalDistanceClosed && goose) {
 			dt = 0.95 * dt * poloidalDistanceClosed/fabs(poloidalDistanceNew-poloidalDistanceOld);
 		}
 
-		// Force stop after a single poloidal orbit
-		if(R_<=TOL) {
-		if(poloidalDistanceNew-poloidalDistanceOld<0 
-						&& w.vPar*poloidalStart_vPar>0
-						&& poloidalDistanceNew<=dt*sqrt(pow(v_ms.r,2)+pow(v_ms.z,2)) ) {
-			if(poloidalDistanceNew<poloidalDistanceClosed){
+		// Accelerate with goose-ing
+		if(R_<=TOL && goose) {
+		if(poloidalDistanceNew-poloidalDistanceOld<0 // approaching
+						&& w.vPar*poloidalStart.vPar>0 // pick the right orbit side for trapped particles
+						&& poloidalDistanceNew<=dt*sqrt(pow(v_ms.r,2)+pow(v_ms.z,2)) ) { // if we done one more dt step it will be too far 
+			if(poloidalDistanceNew<poloidalDistanceClosed) { // close enough to call it a complete orbit
 
 				// Calculate the goose-ing factor
 				gooseFac = nu_dt_max/(nu_D_dt_orbitTotal);
@@ -308,107 +367,104 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 					PRINT("\t\tnu_D_dt_orbitTotal: %f\n", nu_D_dt_orbitTotal);
 					PRINT("\t\tnu_E_dt_orbitTotal: %f\n", nu_E_dt_orbitTotal);
 #endif
-					FLAG=0;
-				}
+					goose=false;
 
-				// Ensure the goose-ing does not push the particle past "runTime"
-				if(t+(gooseFac-1)*t_orbitTotal>runTime) {
-					int gooseFacAdj = (runTime-t)/t_orbitTotal;
+					// Reset state to that of the start of this poloidal orbit
+					// since this orbit cannot be accelerated and we need to 
+					// apply the diffusion as we go along the orbit. This is
+					// usually the impact of a particle thermalizing.
+					
+					w = poloidalStart;
+					t = t_poloidalStart;
+					dt = dtMin;
+				} 
+				else {
+
+					// Ensure the goose-ing does not push the particle past "runTime"
+					if(t+(gooseFac-1)*t_orbitTotal>runTime) {
+						int gooseFacAdj = (runTime-t)/t_orbitTotal;
+#if DEBUGLEVEL >= 3
+						PRINT("\t\n");
+						PRINT("\tAdjusting goose-ing factor from %i to %i\n",gooseFac,gooseFacAdj);
+						PRINT("\tt_orbitTotal: %e\n",t_orbitTotal);
+						PRINT("\tdt: %e\n",dt);
+						PRINT("\tpoloidalDistanceOld: %f\n",poloidalDistanceOld);
+						PRINT("\tpoloidalDistanceNew: %f\n",poloidalDistanceNew);
+#endif
+						if(t_orbitTotal<dt) exit(0);
+						gooseFac = gooseFacAdj;
+					}
+
+					if(gooseFac<1) {
+#if DEBUGLEVEL >= 3
+						PRINT("\tAdjusting goose-ing factor from %i to %i\n",gooseFac,1);
+						PRINT("\tdt: %e\n",dt);
+#endif
+						gooseFac = 1;
+					}
+					t += (gooseFac-1)*t_orbitTotal;
+					t_poloidalStart = t;
+					nPoloidalOrbits++;
+
+					double pitch_0 = w.vPar / vMag_ms;
+#if PITCH_SCATTERING >= 1
+					double pitch_1 = newPitch ( pitch_0, nu_D_dt_orbitTotal*gooseFac );
+#else
+					double pitch_1 = pitch_0;
+#endif
+
+					double energy_0_eV = 0.5 * p.amu*_mi * pow(vMag_ms,2) / _e;
+#if ENERGY_SCATTERING >= 1
+					double energy_1_eV = 
+							newEnergy ( energy_0_eV, vTh_ms, p.amu, T_background_eV, nu_B, nu_E, 
+											nu_E_dt_orbitTotal*gooseFac );
+#else
+					double energy_1_eV = energy_0_eV;
+#endif
+
 #if DEBUGLEVEL >= 3
 					PRINT("\t\n");
-					PRINT("\tAdjusting goose-ing factor from %i to %i\n",gooseFac,gooseFacAdj);
-					PRINT("\tt_orbitTotal: %e\n",t_orbitTotal);
+					PRINT("\tt: %f\n",t);
 					PRINT("\tdt: %e\n",dt);
+					PRINT("\tt_orbitTotal: %e\n",t_orbitTotal);
+					PRINT("\tnu_D_dt: %e\n",nu_D_dt_orbitTotal);
+					PRINT("\tnu_E_dt: %e\n",nu_E_dt_orbitTotal);
+					PRINT("\tgooseFac: %i\n", gooseFac);
+					PRINT("\tenergy0[eV]: %e\n", energy_0_eV);
+					PRINT("\tenergy1[eV]: %e\n", energy_1_eV);
+					PRINT("\tpitch0: %f\n", pitch_0);
+					PRINT("\tpitch1: %f\n", pitch_1);
 					PRINT("\tpoloidalDistanceOld: %f\n",poloidalDistanceOld);
 					PRINT("\tpoloidalDistanceNew: %f\n",poloidalDistanceNew);
+					PRINT("\tpoloidalPoints: %i\n",poloidalPoints);
+					PRINT("\tnu_D_dt_orbitTotal*gooseFac: %f\n", nu_D_dt_orbitTotal*gooseFac);
+					PRINT("\tnu_E_dt_orbitTotal*gooseFac: %f\n", nu_E_dt_orbitTotal*gooseFac);
+					PRINT("\tpitch change: %f\%\n", fabs((pitch_1-pitch_0)/2.0)*100);
+					PRINT("\tenergy change: %f\%\n", fabs((energy_0_eV-energy_1_eV)/energy_0_eV)*100);
+					PRINT("\tv/vTh: %f\%\n",sqrt(energy_1_eV)/sqrt(3.0/2.0*T_background_eV)*100);
 #endif
-					if(t_orbitTotal<dt) exit(0);
-					gooseFac = gooseFacAdj;
-				}
+					REAL vPer_ms_0 = get_vPer_ms ( w, p, textures, spans );
+					update_vPar_and_mu ( pitch_1, energy_1_eV, vPer_ms_0, w, p );
 
-				if(gooseFac<1) {
-#if DEBUGLEVEL >= 3
-					PRINT("\tAdjusting goose-ing factor from %i to %i\n",gooseFac,1);
-					PRINT("\tdt: %e\n",dt);
-#endif
-					gooseFac = 1;
-				}
-				t += (gooseFac-1)*t_orbitTotal;
-				nPoloidalOrbits++;
+					t_orbitTotal = 0;
+					nu_D_dt_orbitTotal = 0;
+					nu_E_dt_orbitTotal = 0;
+					dt = dtMin;
 
-				double pitch_0 = w.vPar / vMag_ms;
-#if PITCH_SCATTERING >= 1
-				double pitch_1 = newPitch ( pitch_0, nu_D_dt_orbitTotal*gooseFac );
-#else
-				double pitch_1 = pitch_0;
-#endif
+					// Update the position with which respect to we test for poloidal orbit completion
 
-				double energy_0_eV = 0.5 * p.amu*_mi * pow(vMag_ms,2) / _e;
-#if ENERGY_SCATTERING >= 1
-				double energy_1_eV = 
-						newEnergy ( energy_0_eV, vTh_ms, p.amu, T_background_eV, nu_B, nu_E, 
-										nu_E_dt_orbitTotal*gooseFac );
-#else
-				double energy_1_eV = energy_0_eV;
-#endif
-
-#if DEBUGLEVEL >= 3
-				PRINT("\t\n");
-				PRINT("\tt: %f\n",t);
-				PRINT("\tdt: %e\n",dt);
-				PRINT("\tt_orbitTotal: %e\n",t_orbitTotal);
-				PRINT("\tnu_D_dt: %e\n",nu_D_dt_orbitTotal);
-				PRINT("\tnu_E_dt: %e\n",nu_E_dt_orbitTotal);
-				PRINT("\tgooseFac: %i\n", gooseFac);
-				PRINT("\tenergy0[eV]: %e\n", energy_0_eV);
-				PRINT("\tenergy1[eV]: %e\n", energy_1_eV);
-				PRINT("\tpitch0: %f\n", pitch_0);
-				PRINT("\tpitch1: %f\n", pitch_1);
-				PRINT("\tpoloidalDistanceOld: %f\n",poloidalDistanceOld);
-				PRINT("\tpoloidalDistanceNew: %f\n",poloidalDistanceNew);
-				PRINT("\tpoloidalPoints: %i\n",poloidalPoints);
-				PRINT("\tnu_D_dt_orbitTotal*gooseFac: %f\n", nu_D_dt_orbitTotal*gooseFac);
-				PRINT("\tnu_E_dt_orbitTotal*gooseFac: %f\n", nu_E_dt_orbitTotal*gooseFac);
-				PRINT("\tpitch change: %f\%\n", fabs((pitch_1-pitch_0)/2.0)*100);
-				PRINT("\tenergy change: %f\%\n", fabs((energy_0_eV-energy_1_eV)/energy_0_eV)*100);
-				PRINT("\tv/vTh: %f\%\n",sqrt(energy_1_eV)/sqrt(3.0/2.0*T_background_eV)*100);
-#endif
-				// Update particle with new vPar and mu
-				double vMag_ms_1 = sqrt ( 2 * energy_1_eV * _e / (p.amu*_mi) );
-				double vPar_ms_1 = vMag_ms_1 * pitch_1;
-				double vPerSq_ms_1 = pow(vMag_ms_1,2)-pow(vPar_ms_1,2);
-				REAL vPer_ms = get_vPer ( w, p.mu, textures, spans );
-				float B_T = (p.amu*_mi*pow(vPer_ms,2))/(p.mu * 2);
-				double mu_1 = (p.amu*_mi) * vPerSq_ms_1 / ( 2 * B_T );
-
-#if DEBUGLEVEL >= 3
-				PRINT("\tvPar_0: %e, vPar_1: %e\n", w.vPar, vPar_ms_1);
-				PRINT("\tmu_0: %e, mu_1: %e\n", p.mu, mu_1);
-#endif
-				p.mu = mu_1;
-				w.vPar = vPar_ms_1;
-
-				t_orbitTotal = 0;
-				nu_D_dt_orbitTotal = 0;
-				nu_E_dt_orbitTotal = 0;
-				dt = dtMin;
-
-				// Update the position with which respect to we test for poloidal orbit completion
-
-				poloidalStart_r = w.r;
-				poloidalStart_z = w.z;
-				poloidalStart_vPar = w.vPar;
-				poloidalDistanceOld = poloidalDistanceNew;
-				poloidalDistanceNew = 0;
-				poloidalPoints = 0;
-
+					poloidalStart = w;
+					poloidalDistanceOld = poloidalDistanceNew;
+					poloidalDistanceNew = 0;
+					poloidalPoints = 0;
+				} // End of else (gooseFac<1) 
 			}
 			else {
 				dt=0.95*poloidalDistanceNew/sqrt(pow(v_ms.r,2)+pow(v_ms.z,2));
-			}
+			} // End of else (poloidalDistanceNew<poloidalDistanceClosed)
 
 		}
-		}
+		} // End of (R_<=TOL && goose)
 
 		ii++;
 

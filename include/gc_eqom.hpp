@@ -80,19 +80,6 @@ class Ctextures {
         }
 };
 
-// Calculate vPer given position and mu
-
-#ifdef __CUDACC__
-__host__ __device__
-#endif
-REAL get_vPer ( const Crk &p, const REAL mu, const Ctextures &textures, const CinterpSpans &spans ) {
-
-	    CinterpIndex index;
-	    index = get_index (p.z,p.r,spans);
-        REAL bmag = bilinear_interp ( index, textures.bmag );
-	    return sqrtf ( 2.0 * mu * bmag / _mi );
-}
-
 // Calculate vGC given position, mu and vPar.
 
 #ifdef __CUDACC__
