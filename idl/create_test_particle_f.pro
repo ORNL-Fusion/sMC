@@ -25,7 +25,7 @@ eqdsk   = readGEQDSK ( eqdskFName )
 
 nP    = 10000L
 n_m_3 = 4.0e19
-E_keV = 100.0
+E_keV = 50.0
 
 ; Create a template Maxwellian for a single spatial point
 
@@ -36,15 +36,15 @@ randZ	= randomN ( undefined, nP )
 T_joule = 2.0/3.0 * E_keV * 1e3 * e_
 vTh = sqrt ( 2.0 * T_joule / (mi*amu) )
 
-v_x = randX * vTh 
+v_x = randX * vTh
 v_y = randY * vTh
 v_z = randZ * vTh
 
 ; Spatial point
 
 x_r = fltArr(nP) + (max(eqdsk.rbbbs)-eqdsk.rmaxis)/2 + eqdsk.rmaxis
-x_z = fltArr(nP)
-x_p = fltArr(nP) 
+x_z = fltArr(nP)*0.0
+x_p = fltArr(nP)*0.0
 
 print, 'R: ', x_r[0]
 
@@ -73,11 +73,25 @@ vMag = sqrt ( v_x^2 + v_y^2 + v_z^2 )
 vPar = v_r * bu_r + v_z * bu_z + v_p * bu_p
 vPer = sqrt ( vMag^2 - vPar^2 )
 
+; Offset in vPer/vPar
+; -------------------
+
+vParOffSet = 0.02 * c
+vPerOffSet = 0.02 * c
+
+vPar = vPar + vParOffSet
+vPer = vPer + vPerOffSet
+vMag = sqrt ( vPar^2 + vPer^2 )
+
+; --------------------
+
 pitch = vPar / vMag
 
 J_to_eV = 1/e_
 
-E_eV    = m * vMag^2 / 2.0 * J_to_eV
+E_eV = m * vMag^2 / 2.0 * J_to_eV
+
+mu = ( amu * mi ) * vPer^2 / ( 2.0 * bMag )
 
 weight = fltArr(nP) + n_m_3 / nP
 status = intArr(nP)
@@ -116,7 +130,7 @@ endif
 
 ; Write test netCDF file for reading into AORSA
 
-nc_id = nCdf_create ( 'data/'+fName+'.nc', /clobber )
+	nc_id = nCdf_create ( 'data/'+fName+'.nc', /clobber )
 
 	nCdf_control, nc_id, /fill
 	
@@ -124,19 +138,29 @@ nc_id = nCdf_create ( 'data/'+fName+'.nc', /clobber )
 	
 	vPer_id = nCdf_varDef ( nc_id, 'vPer', np_id, /float )
 	vPar_id = nCdf_varDef ( nc_id, 'vPar', np_id, /float )
-	r_id = nCdf_varDef ( nc_id, 'R', np_id, /float )
+	E_eV_id = nCdf_varDef ( nc_id, 'E_eV', np_id, /float )
+	r_id = nCdf_varDef ( nc_id, 'r', np_id, /float )
+	p_id = nCdf_varDef ( nc_id, 'p', np_id, /float )
 	z_id = nCdf_varDef ( nc_id, 'z', np_id, /float )
 	weight_id = nCdf_varDef ( nc_id, 'weight', np_id, /float )
-	status_id = nCdf_varDef ( nc_id, 'status', np_id, /float )
-	
+	status_id = nCdf_varDef ( nc_id, 'status', np_id, /short )
+	amu_id = nCdf_varDef ( nc_id, 'amu', np_id, /short )
+	_Z_id = nCdf_varDef ( nc_id, 'Z', np_id, /short )
+	mu_id = nCdf_varDef ( nc_id, 'mu', np_id, /float )
+
 	nCdf_control, nc_id, /enDef
 	
-	nCdf_varPut, nc_id, R_id, x_r
+	nCdf_varPut, nc_id, r_id, x_r
+	nCdf_varPut, nc_id, p_id, x_p 
 	nCdf_varPut, nc_id, z_id, x_z 
 	nCdf_varPut, nc_id, vPer_id, vPer 
 	nCdf_varPut, nc_id, vPar_id, vPar 
 	nCdf_varPut, nc_id, weight_id, weight
 	nCdf_varPut, nc_id, status_id, status
+	nCdf_varPut, nc_id, E_eV_id, E_eV
+	nCdf_varPut, nc_id, amu_id, amu + intArr(nP)
+	nCdf_varPut, nc_id, _Z_id, Z + intArr(nP)
+	nCdf_varPut, nc_id, mu_id, mu
 
 nCdf_close, nc_id
 

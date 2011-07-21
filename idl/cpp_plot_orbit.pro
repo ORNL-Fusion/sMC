@@ -1,4 +1,6 @@
-pro cpp_plot_orbit
+pro cpp_plot_orbit, color = color
+
+	if not keyword_set(color) then color = 'red'
 
 	fileList = file_search ( 'output/*orbit.nc' )
 
@@ -36,7 +38,7 @@ pro cpp_plot_orbit
 					layout = [5,2,ii], $
 		   			/current, dim = [1400,800], $
 				   	title = tleStr	)
-			p = plot ( rOrb, zOrb, /over, thick = 1, color = 'red' )
+			p = plot ( rOrb, zOrb, /over, thick = 1, color = color )
 
 			x = rOrb * cos ( pOrb )
 			y = rOrb * sin ( pOrb )

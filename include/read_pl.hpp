@@ -5,5 +5,6 @@
 #include <vector>
 
 int read_pl ( const std::string fName, std::vector<Cgc_particle> &particles );
+int write_pl ( const std::string fName, std::vector<Cgc_particle> &particles );
 
 #endif

@@ -21,7 +21,7 @@
 #define PRINT printf
 #endif
 
-#define __SAVE_ORBITS__
+//#define __SAVE_ORBITS__
 
 // Runge-Kutta-Fehlberg integrator
 // pg. 254 Burden and Faires
@@ -112,6 +112,9 @@ void update_vPar_and_mu ( float pitch_1, float energy_1_eV, const float vPer_ms_
 	float B_T = (p.amu*_mi*pow(vPer_ms_0,2))/(p.mu * 2);
 
 	p.mu = (p.amu*_mi) * vPerSq_ms_1 / ( 2 * B_T );
+	p.energy_eV = energy_1_eV;
+	//p.vPar = w.vPar;
+	//p.vPer = sqrt ( vPerSq_ms_1 );
 
 #if DEBUGLEVEL >= 5
 	PRINT("\t\t\tvPar_0: %e, vPar_1: %e\n", vPar_0, w.vPar);
@@ -120,22 +123,41 @@ void update_vPar_and_mu ( float pitch_1, float energy_1_eV, const float vPer_ms_
 }
 
 #ifdef __CUDACC__
+__host__ __device__ 
+#endif
+void update_p ( const Crk &w, Cgc_particle &p ) {
+
+	p.r = w.r; 
+	p.p = w.p; 
+	p.z = w.z; 
+	p.vPar = w.vPar;
+
+	// Remember that p.energy_eV is updated in the integration
+	// as it is needed to scale the accuracy.
+	double vMag_ms = sqrt ( 2 * p.energy_eV * _e / (p.amu*_mi) );
+	double vPerSq_ms = pow(vMag_ms,2)-pow(p.vPar,2);
+	p.vPer = sqrt ( vPerSq_ms );
+
+}
+
+#ifdef __CUDACC__
 __host__ __device__
 #endif
 int move_particle ( Cgc_particle &p, const Ctextures &textures, 
-        const CinterpSpans &spans, const unsigned int pp ) {
+        const CinterpSpans &spans, const unsigned int pp, const int seed ) {
 
     // Reset counters for new paricle 
  	unsigned int ii = 0, jj = 0;	
 	int err = 0;
 	REAL t = 0.0;
-	REAL runTime = 1e-1;
+	REAL runTime = 2e-1;
 	REAL dt;
 	REAL dtMax = 1e-4;
 	REAL dtMin = 1e-9;
 	REAL EPS = 1e-5;
 	unsigned int FLAG = 1;
 
+#if GOOSE >= 1
 	// Single poloidal orbit vars
 	float poloidalDistanceOld = 0;
 	float poloidalDistanceNew = 0;
@@ -143,10 +165,11 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	Crk poloidalStart(p.r,p.p,p.z,p.vPar);
 	int gooseFac = 1;
 	bool goose = true;
-	float nu_dt_max = 0.01;
+	float nu_dt_max = 0.1;
 	int poloidalPoints = 0;
 	int nPoloidalOrbits = 0;
 	float t_poloidalStart = 0;
+#endif
 
 	// Diffusion vars
 	float nu_B = 0;
@@ -155,12 +178,12 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	float t_orbitTotal = 0;
 	double vMag_ms = 0, vTh_ms;
 	float coulomb_log = 23.0; 
-	double E_background_eV = 2.0e3;
+	double E_background_eV = 1.0e3;
 	double T_background_eV = 2.0/3.0 * E_background_eV;
-	double n_background_cm3 = 1e13;
+	double n_background_cm3 = 5e13;
 
 	// random number generation
-	srand(time(NULL));
+	srand(seed);
 	int pm = 0;
 
 	Crk K1, K2, K3, K4, K5, K6, R, v_ms;
@@ -225,15 +248,17 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 		if(R_<=TOL) {
 			// Approximation accepted
 			t += dt;
-			t_orbitTotal += dt;
-			poloidalPoints++;
+
 			w += 25.0/216.0*K1 + 1408.0/2565.0*K3 + 2197.0/4104.0*K4 - 1.0/5.0*K5;
 			jj++;
-
+#if GOOSE >= 1
+			t_orbitTotal += dt;
+			poloidalPoints++;
 			poloidalDistanceOld = poloidalDistanceNew;
 			poloidalDistanceNew = sqrt ( pow(poloidalStart.r-w.r,2)+pow(poloidalStart.z-w.z,2) );
 #if DEBUGLEVEL >= 4
 			PRINT("\t\tPoloidalDistance: %f\n", poloidalDistanceNew );
+#endif
 #endif
 			// Calculate pitch and energy diffusion coefficients 
 			// 
@@ -264,13 +289,15 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 			nu_D = 3 * sqrt (_pi/2) * nu_B * (phi_x-psi_x)/pow(x,3);
 			nu_E = 3 * sqrt (_pi/2) * nu_B * psi_x/x;
+#if GOOSE >= 1
 			nu_D_dt_orbitTotal += nu_D*dt;
 			nu_E_dt_orbitTotal += nu_E*dt;
 
 			if(!goose) {
+#endif
 				double pitch_0 = w.vPar / vMag_ms;
 #if PITCH_SCATTERING >= 1
-				double pitch_1 = newPitch ( pitch_0, nu_D_dt_orbitTotal*gooseFac );
+				double pitch_1 = newPitch ( pitch_0, nu_D*dt );
 #else
 				double pitch_1 = pitch_0;
 #endif
@@ -279,14 +306,15 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 #if ENERGY_SCATTERING >= 1
 				double energy_1_eV = 
 						newEnergy ( energy_0_eV, vTh_ms, p.amu, T_background_eV, nu_B, nu_E, 
-										nu_E_dt_orbitTotal*gooseFac );
+										nu_E*dt );
 #else
 				double energy_1_eV = energy_0_eV;
 #endif
-
-				REAL vPer_ms_0 = get_vPer_ms ( w, p, textures, spans );
 				update_vPar_and_mu ( pitch_1, energy_1_eV, vPer_ms_0, w, p );
+#if GOOSE >= 1
 			}
+#endif
+
 #if DEBUGLEVEL >= 4
 			PRINT("\tvMag = %f\n", sqrt(pow(p.vPer,2)+pow(p.vPar,2)));
 			PRINT("\tvPar = %f\n", w.vPar);
@@ -342,7 +370,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			FLAG = 0;
 		}
 
-
+#if GOOSE >= 1
 		// Adjust dt such that the poloidal steps are within poloidalDistanceClosed
 		if(fabs(poloidalDistanceNew-poloidalDistanceOld)>=poloidalDistanceClosed && goose) {
 			dt = 0.95 * dt * poloidalDistanceClosed/fabs(poloidalDistanceNew-poloidalDistanceOld);
@@ -465,7 +493,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 		}
 		} // End of (R_<=TOL && goose)
-
+#endif
 		ii++;
 
 #ifndef __CUDA_ARCH__
@@ -478,10 +506,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 	} // end while(FLAG=1)
 
-	p.r = w.r; 
-	p.p = w.p; 
-	p.z = w.z; 
-	p.vPar = w.vPar;
+	update_p ( w, p );
 
 #if DEBUGLEVEL >= 1
 	PRINT("\n");

@@ -64,23 +64,25 @@ int main ()
 	for(unsigned int p=0;p<particles.size();p++){
 		index = get_index ( particles[p].z, particles[p].r, spans );
 		bmag_p = bilinear_interp ( index, eqdsk.bmag );
-		particles[p].amu = amu;
-		particles[p].Z = _Z;
-		particles[p].mu = ( amu * _mi ) * pow(particles[p].vPer,2) / ( 2.0 * bmag_p );
-		particles[p].energy_eV = 0.5 * ( amu * _mi ) * 
-				( pow(particles[p].vPer,2) + pow(particles[p].vPar,2) ) / _e;
+		//particles[p].amu = amu;
+		//particles[p].Z = _Z;
+		//particles[p].mu = ( amu * _mi ) * pow(particles[p].vPer,2) / ( 2.0 * bmag_p );
+		//particles[p].energy_eV = 0.5 * ( amu * _mi ) * 
+		//		( pow(particles[p].vPer,2) + pow(particles[p].vPar,2) ) / _e;
 	} // end for(unsigned int p=0;p<particles.size();p++)	
 
 	vector<Cgc_particle> particles_CUDA(particles);	
 	
+	srand(time(NULL));
+		
 	time_t startTime, endTime;
 	startTime = time ( NULL );
 
-	for(unsigned int p=0;p<100;p++) {
+	for(unsigned int p=0;p<particles.size();p++) {
 
 		if(!particles[p].status) {
 
-            stat = move_particle ( particles[p], textures, spans, p );
+            stat = move_particle ( particles[p], textures, spans, p, rand() );
 			
 		} // end if(!particle[p].status)
 	} // end for(p)
@@ -96,5 +98,9 @@ int main ()
 
 	cout << "End of program :)" << endl;
 #endif
+
+	string out_plName = "output/fdis_D_40keV_D3D_out.nc";
+	stat = write_pl ( out_plName, particles );
+
 	return 0;
 }
