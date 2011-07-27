@@ -21,8 +21,6 @@
 #define PRINT printf
 #endif
 
-//#define __SAVE_ORBITS__
-
 // Runge-Kutta-Fehlberg integrator
 // pg. 254 Burden and Faires
 
@@ -154,7 +152,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	REAL dt;
 	REAL dtMax = 1e-4;
 	REAL dtMin = 1e-9;
-	REAL EPS = 1e-5;
+	REAL EPS = 1e-3;
 	unsigned int FLAG = 1;
 
 #if GOOSE >= 1
@@ -165,20 +163,20 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	Crk poloidalStart(p.r,p.p,p.z,p.vPar);
 	int gooseFac = 1;
 	bool goose = true;
-	float nu_dt_max = 0.1;
 	int poloidalPoints = 0;
 	int nPoloidalOrbits = 0;
 	float t_poloidalStart = 0;
 #endif
 
 	// Diffusion vars
+	float nu_dt_max = 0.1;
 	float nu_B = 0;
 	float nu_D = 0, nu_D_dt_orbitTotal=0;
 	float nu_E = 0, nu_E_dt_orbitTotal=0;
 	float t_orbitTotal = 0;
 	double vMag_ms = 0, vTh_ms;
 	float coulomb_log = 23.0; 
-	double E_background_eV = 1.0e3;
+	double E_background_eV = 2.0e3;
 	double T_background_eV = 2.0/3.0 * E_background_eV;
 	double n_background_cm3 = 5e13;
 
@@ -198,6 +196,9 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	std::vector<REAL> rOut(1,p.r);	
 	std::vector<REAL> pOut(1,p.p);	
 	std::vector<REAL> zOut(1,p.z);	
+	std::vector<REAL> E_eVOut(1,p.energy_eV);	
+	std::vector<REAL> pitchOut(1,p.vPar/sqrt(pow(p.vPer,2)+pow(p.vPar,2)));	
+	std::vector<REAL> dtOut(1,dtMin);	
 #endif
 #endif
 
@@ -241,8 +242,8 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 		REAL R_ = Kmax ( R );
 
-		// Error control is scaled with energy
-		REAL TOL = EPS * p.energy_eV;
+		// Error control is scaled with energy / v
+		REAL TOL = EPS * sqrt(p.energy_eV);
 		REAL delta = 0.84 * powf ( TOL / R_, 0.25 );
 
 		if(R_<=TOL) {
@@ -289,6 +290,23 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 			nu_D = 3 * sqrt (_pi/2) * nu_B * (phi_x-psi_x)/pow(x,3);
 			nu_E = 3 * sqrt (_pi/2) * nu_B * psi_x/x;
+
+			// Check if the particle energy has dropped so low as to
+			// require reducing dt to keep nu * dt << 1
+			
+			if(nu_D*dt>nu_dt_max || nu_E*dt>nu_dt_max) {
+				// Unaccept the approximation and reduce dt
+				t -= dt;
+
+				w -= 25.0/216.0*K1 + 1408.0/2565.0*K3 + 2197.0/4104.0*K4 - 1.0/5.0*K5;
+				jj--;
+#if GOOSE >= 1
+				goose = false;
+				t_orbitTotal -= dt;
+				poloidalPoints--;
+#endif
+			} 
+
 #if GOOSE >= 1
 			nu_D_dt_orbitTotal += nu_D*dt;
 			nu_E_dt_orbitTotal += nu_E*dt;
@@ -311,6 +329,18 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 				double energy_1_eV = energy_0_eV;
 #endif
 				update_vPar_and_mu ( pitch_1, energy_1_eV, vPer_ms_0, w, p );
+
+#ifndef __CUDA_ARCH__
+#ifdef __SAVE_ORBITS__
+				rOut.push_back(w.r);
+				pOut.push_back(w.p);
+				zOut.push_back(w.z);
+				E_eVOut.push_back(energy_1_eV);
+				pitchOut.push_back(pitch_1);
+				dtOut.push_back(dt);
+#endif
+#endif
+
 #if GOOSE >= 1
 			}
 #endif
@@ -329,7 +359,9 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			PRINT("\tnu_D = %e\n", nu_D);
 			PRINT("\tnu_B = %e\n", nu_B);
 			PRINT("\tnu_D*dt = %e\n", nu_D*dt);
+#if GOOSE >= 1
 			PRINT("\tdt: %e, dtMin: %e\n", dt, nu_dt_max/nu_D);
+#endif
 #endif
 		}
 
@@ -474,6 +506,16 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 					REAL vPer_ms_0 = get_vPer_ms ( w, p, textures, spans );
 					update_vPar_and_mu ( pitch_1, energy_1_eV, vPer_ms_0, w, p );
 
+#ifndef __CUDA_ARCH__
+#ifdef __SAVE_ORBITS__
+					rOut.push_back(w.r);
+					pOut.push_back(w.p);
+					zOut.push_back(w.z);
+					E_eVOut.push_back(energy_1_eV);
+					pitchOut.push_back(pitch_1);
+					dtOut.push_back(dt);
+#endif
+#endif
 					t_orbitTotal = 0;
 					nu_D_dt_orbitTotal = 0;
 					nu_E_dt_orbitTotal = 0;
@@ -494,15 +536,13 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 		}
 		} // End of (R_<=TOL && goose)
 #endif
-		ii++;
 
-#ifndef __CUDA_ARCH__
-#ifdef __SAVE_ORBITS__
-		rOut.push_back(w.r);
-		pOut.push_back(w.p);
-		zOut.push_back(w.z);
-#endif
-#endif
+		// Update dt for the case where nu * dt is not << 1 even
+		// without goosing, i.e., uber cool particles E/T << 1
+		if() {
+		}
+
+		ii++;
 
 	} // end while(FLAG=1)
 
@@ -513,8 +553,10 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
     PRINT("nSteps: %i with %i accepted.\n", ii,jj);
 #endif
 
+#if GOOSE >= 1
 #if DEBUGLEVEL >= 2
 	PRINT("\tnPoloidalOrbits: %i\n", nPoloidalOrbits);
+#endif
 #endif
 
 #ifndef __CUDA_ARCH__
@@ -535,16 +577,25 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	NcVar *nc_rOrb = dataFile.add_var ("rOrb", ncFloat, nDim );
 	NcVar *nc_pOrb = dataFile.add_var ("pOrb", ncFloat, nDim );
 	NcVar *nc_zOrb = dataFile.add_var ("zOrb", ncFloat, nDim );
+	NcVar *nc_E_eV = dataFile.add_var ("E_eV", ncFloat, nDim );
+	NcVar *nc_pitch = dataFile.add_var ("pitch", ncFloat, nDim );
+	NcVar *nc_dt = dataFile.add_var ("dt", ncFloat, nDim );
 
 	NcVar *nc_vPar = dataFile.add_var ("vPar", ncFloat, sDim );
-
+	NcVar *nc_nu_B = dataFile.add_var ("nu_B", ncFloat, sDim );
 	NcVar *nc_stat = dataFile.add_var ("stat", ncInt, sDim );
 
 	nc_rOrb->put(&rOut[0],nSteps);
 	nc_pOrb->put(&pOut[0],nSteps);
 	nc_zOrb->put(&zOut[0],nSteps);
+	nc_E_eV->put(&E_eVOut[0],nSteps);
+	nc_pitch->put(&pitchOut[0],nSteps);
+	nc_dt->put(&dtOut[0],nSteps);
+
 	nc_stat->put(&p.status,1);
 	nc_vPar->put(&p.vPar,1);
+	nc_nu_B->put(&nu_B,1);
+
 #endif
 #endif
 

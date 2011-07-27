@@ -25,7 +25,7 @@ eqdsk   = readGEQDSK ( eqdskFName )
 
 nP    = 10000L
 n_m_3 = 4.0e19
-E_keV = 50.0
+E_keV = 2.0
 
 ; Create a template Maxwellian for a single spatial point
 
@@ -69,21 +69,21 @@ bu_r = b_r / bMag
 bu_p = b_p / bMag
 bu_z = b_z / bMag
 
-vMag = sqrt ( v_x^2 + v_y^2 + v_z^2 )
-vPar = v_r * bu_r + v_z * bu_z + v_p * bu_p
+vMag = v_x*0+vTh;sqrt ( v_x^2 + v_y^2 + v_z^2 )
+vPar = vMag*0;v_r * bu_r + v_z * bu_z + v_p * bu_p
 vPer = sqrt ( vMag^2 - vPar^2 )
 
-; Offset in vPer/vPar
-; -------------------
-
-vParOffSet = 0.02 * c
-vPerOffSet = 0.02 * c
-
-vPar = vPar + vParOffSet
-vPer = vPer + vPerOffSet
-vMag = sqrt ( vPar^2 + vPer^2 )
-
-; --------------------
+;; Offset in vPer/vPar
+;; -------------------
+;
+;vParOffSet = 0.02 * c
+;vPerOffSet = 0.02 * c
+;
+;vPar = vPar + vParOffSet
+;vPer = vPer + vPerOffSet
+;vMag = sqrt ( vPar^2 + vPer^2 )
+;
+;; --------------------
 
 pitch = vPar / vMag
 

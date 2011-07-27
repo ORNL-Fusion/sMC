@@ -30,7 +30,7 @@ pro cpp_plot_orbit, color = color
 
 		nCdf_close,	cdfId 
 
-		if stat eq 0 then begin
+		;if stat eq 0 then begin
 
 			tleStr = string(f) + ' , ' + string (n_elements(rorb)) + ' ' + string(vPar)
 			c = contour ( eqdsk.psizr, eqdsk.r, eqdsk.z, $
@@ -54,7 +54,7 @@ pro cpp_plot_orbit, color = color
 
 			ii++
 
-		endif
+		;endif
 		
 		f++
 
