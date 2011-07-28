@@ -38,7 +38,7 @@ LFLAGS := -L$(NETCDFDIR)/lib -L$(CUDALIBDIR)
 LIBS := $(ALGLIBDIR)/*.o -lcuda -lcudart -lnetcdf_c++ -lnetcdf
 
 USECUDA:=0
-DEBUG:=4
+DEBUG:=3
 PITCH_SCATTERING:=1
 ENERGY_SCATTERING:=1
 GOOSE:=0

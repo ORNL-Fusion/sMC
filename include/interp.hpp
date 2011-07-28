@@ -5,6 +5,12 @@
 #include "array2D.hpp"
 #include <cmath>
 
+#ifdef __CUDA_ARCH__
+#define PRINT cuPrintf 
+#else
+#define PRINT printf
+#endif
+
 //#ifdef __CUDACC__
 //#include "C/src/simplePrintf/cuPrintf.cu"
 //#endif
@@ -68,26 +74,16 @@ CinterpIndex get_index ( const REAL mIn, const REAL nIn, const CinterpSpans &spa
     // Check if particle is off grid	
     if( index.m1<0 || index.m2>=(spans.NROW-1) || index.n1<0 || index.n2>=(spans.NCOL-1) ) {
         index.stat+=1;
-#if DEBUGLEVEL >= 1
-#ifndef __CUDA_ARCH__
-		printf("\t\tmIn: %f\n",mIn);
-		printf("\t\tnIn: %f\n",nIn);
-		printf("\t\tindex.m: %f\n",index.m);
-		printf("\t\tindex.n: %f\n",index.n);
-		printf("\t\tindex.m1: %i\n",index.m1);
-		printf("\t\tindex.m2: %i\n",index.m2);
-		printf("\t\tindex.n1: %i\n",index.n1);
-		printf("\t\tindex.n2: %i\n",index.n2);
-#else
-		cuPrintf("\t\tmIn: %f\n",mIn);
-		cuPrintf("\t\tnIn: %f\n",nIn);
-		cuPrintf("\t\tindex.m: %f\n",index.m);
-		cuPrintf("\t\tindex.n: %f\n",index.n);
-		cuPrintf("\t\tindex.m1: %i\n",index.m1);
-		cuPrintf("\t\tindex.m2: %i\n",index.m2);
-		cuPrintf("\t\tindex.n1: %i\n",index.n1);
-		cuPrintf("\t\tindex.n2: %i\n",index.n2);
-#endif
+#if DEBUGLEVEL >= 4
+		PRINT("\t\t\t\t%s line: %i\n",__FILE__,__LINE__);
+		PRINT("\t\t\t\tmIn: %f\n",mIn);
+		PRINT("\t\t\t\tnIn: %f\n",nIn);
+		PRINT("\t\t\t\tindex.m: %f\n",index.m);
+		PRINT("\t\t\t\tindex.n: %f\n",index.n);
+		PRINT("\t\t\t\tindex.m1: %i\n",index.m1);
+		PRINT("\t\t\t\tindex.m2: %i\n",index.m2);
+		PRINT("\t\t\t\tindex.n1: %i\n",index.n1);
+		PRINT("\t\t\t\tindex.n2: %i\n",index.n2);
 #endif
     }
 

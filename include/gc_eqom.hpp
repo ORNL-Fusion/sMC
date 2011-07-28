@@ -9,6 +9,12 @@
 #include <iostream>
 
 #ifdef __CUDA_ARCH__
+#define PRINT cuPrintf 
+#else
+#define PRINT printf
+#endif
+
+#ifdef __CUDA_ARCH__
 #include "C/src/simplePrintf/cuPrintf.cu"
 #endif
 
@@ -36,20 +42,15 @@ class Ctextures {
             bool err = true; 
 
             if(!bmag.ptr || bmag.pitchBytes<=1) { 
-#ifndef __CUDA_ARCH__
-				std::cout << "bmag NOT valid" << std::endl;
-				std::cout << bmag.ptr << "  " << bmag.pitchBytes << std::endl;
-#else
-				cuPrintf("bmag NOT valid\n");
+#if DEBUGLEVEL >= 1
+				PRINT("bmag NOT valid\n");
 #endif
                 err = false;
 			}
 
             if(!b_r.ptr || b_r.pitchBytes<=1) {
-#ifndef __CUDA_ARCH__
-				std::cout << "b_r NOT valid" << std::endl;
-#else
-				cuPrintf("b_r NOT valid\n");
+#if DEBUGLEVEL >= 1
+				PRINT("b_r NOT valid\n");
 #endif
                 err = false;
 			}
@@ -96,37 +97,22 @@ Crk vGC ( const REAL dt, const Crk &p, const REAL mu,
         
 	    CinterpIndex index;
 	    index = get_index (p.z,p.r,spans);
-///#ifdef __PROFILING__
-///		index.stat = 0;
-///#endif
         
 	    if(index.stat>=1) {
             err++;
-#ifndef __CUDA_ARCH__
-			std::cout << "\t\tget_index() result off grid:" << std::endl;
-			printf("\t\tp.r: %f, p.z: %f\n",p.r,p.z);
-			printf("\t\tspans.mfront: %f, spans.mback: %f, spans.nfront: %f, spans.nback %f, spans.NROW: %i, spans.NCOL: %i\n", 
-							spans.mfront, spans.mback, spans.nfront, spans.nback, 
-							spans.NROW, spans.NCOL);
-#else
-			cuPrintf("\t\tget_index() result off grid: %i %i %i %i %f %f\n", 
-							index.m1, index.m2, index.n1, index.n2, index.m, index.n);
-			cuPrintf("\t\tp.r: %f, p.z: %f\n",p.r,p.z);
-			cuPrintf("\t\tspans.mfront: %f, spans.mback: %f, spans.nfront: %f, spans.nback %f, spans.NROW: %i, spans.NCOL: %i\n", 
-							spans.mfront, spans.mback, spans.nfront, spans.nback, 
-							spans.NROW, spans.NCOL);
+#if DEBUGLEVEL >= 1
+			PRINT("\t\t%s line: %i\n",__FILE__,__LINE__);
+			PRINT("\t\tParticle off grid:\n"); 
+			PRINT("\t\tp.r: %f, p.z: %f\n",p.r,p.z);
+			PRINT("\t\tspans.mfront: %f\n",spans.mfront);
+			PRINT("\t\tspans.mback: %f\n",spans.mback);
+			PRINT("\t\tspans.nfront: %f\n",spans.nfront);
+			PRINT("\t\tspans.nback: %f\n",spans.nback);
+			PRINT("\t\tspans.NROW: %f\n",spans.NROW);
+			PRINT("\t\tspans.NCOL: %f\n",spans.NCOL);
 #endif
             return vGC;
         }
-//		else {
-//#ifdef __CUDA_ARCH__
-//			cuPrintf("get_index() GOOD: %i %i %i %i %f %f\n", 
-//							index.m1, index.m2, index.n1, index.n2, index.m, index.n);
-//#else
-//			printf("get_index() GOOD: %i %i %i %i %f %f\n", 
-//							index.m1, index.m2, index.n1, index.n2, index.m, index.n);
-//#endif
-//		}
 
 #ifndef __CUDA_ARCH__	
         REAL bmag = bilinear_interp ( index, textures.bmag );

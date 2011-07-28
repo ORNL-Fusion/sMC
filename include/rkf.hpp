@@ -34,6 +34,13 @@ float newPitch ( float pitch_0, float nu_D_dt ) {
 	if(!pm) pm = -1;
 	double pitch_1 = pitch_0 * (1-nu_D_dt) 
 			+ pm * sqrt ( (1-pow(pitch_0,2)) * nu_D_dt );
+#if DEBUGLEVEL >= 3
+	if(pitch_1 > 1 || pitch_1 < -1) {
+			PRINT("\t\t\t*** Error in pitch angle update!!!\n");
+			PRINT("\t\t\t*** pitch_0: %f, pitch_1: %f\n", pitch_0, pitch_1);
+			exit(0);
+	}
+#endif
 	return  pitch_1;
 }
 
@@ -73,6 +80,13 @@ float newEnergy ( float energy_0_eV, float vTh_ms, int amu, float T_background_e
 	double energy_1_eV = energy_0_eV - (2*nu_E_dt) * 
 			(energy_0_eV - (3.0/2.0 + energy_0_eV / nu_E * dnu_E_dE)*T_background_eV)
 			+ pm*2*sqrt(T_background_eV*energy_0_eV*(nu_E_dt));
+
+#if DEBUGLEVEL >= 3
+	if(energy_1_eV <= 0) {
+			PRINT("\t\t\t*** Negative energy update!!!\n");
+			exit(0);
+	}
+#endif
 
 	return energy_1_eV;
 }
@@ -151,7 +165,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	REAL runTime = 2e-1;
 	REAL dt;
 	REAL dtMax = 1e-4;
-	REAL dtMin = 1e-9;
+	REAL dtMin = 1e-10;
 	REAL EPS = 1e-3;
 	unsigned int FLAG = 1;
 
@@ -173,6 +187,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 	float nu_B = 0;
 	float nu_D = 0, nu_D_dt_orbitTotal=0;
 	float nu_E = 0, nu_E_dt_orbitTotal=0;
+	float dt_nu = -1;
 	float t_orbitTotal = 0;
 	double vMag_ms = 0, vTh_ms;
 	float coulomb_log = 23.0; 
@@ -242,7 +257,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 		REAL R_ = Kmax ( R );
 
-		// Error control is scaled with energy / v
+		// Error control is scaled with vMag
 		REAL TOL = EPS * sqrt(p.energy_eV);
 		REAL delta = 0.84 * powf ( TOL / R_, 0.25 );
 
@@ -297,13 +312,21 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			if(nu_D*dt>nu_dt_max || nu_E*dt>nu_dt_max) {
 				// Unaccept the approximation and reduce dt
 				t -= dt;
-
 				w -= 25.0/216.0*K1 + 1408.0/2565.0*K3 + 2197.0/4104.0*K4 - 1.0/5.0*K5;
 				jj--;
+				dt_nu = nu_dt_max / nu_D * 0.9;
+				if(nu_dt_max / nu_E * 0.9 < dt_nu) 
+						dt_nu = nu_dt_max / nu_E * 0.9;
 #if GOOSE >= 1
 				goose = false;
 				t_orbitTotal -= dt;
 				poloidalPoints--;
+#endif
+#if DEBUGLEVEL >= 4 
+				PRINT("\t\tPariticle so slow that nu*dt !<< 1\n");
+				PRINT("\t\tdt: %e, dt_nu: %e\n",dt, dt_nu );
+				PRINT("\t\tnu_D*dt: %f, nu_E*dt: %f\n", nu_D*dt, nu_E*dt );
+				PRINT("\t\tv/vTh: %f\n", x);
 #endif
 			} 
 
@@ -311,7 +334,9 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 			nu_D_dt_orbitTotal += nu_D*dt;
 			nu_E_dt_orbitTotal += nu_E*dt;
 
-			if(!goose) {
+			if(!goose && dt_nu<0) {
+#else
+			if(dt_nu<0) {
 #endif
 				double pitch_0 = w.vPar / vMag_ms;
 #if PITCH_SCATTERING >= 1
@@ -341,9 +366,7 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 #endif
 #endif
 
-#if GOOSE >= 1
 			}
-#endif
 
 #if DEBUGLEVEL >= 4
 			PRINT("\tvMag = %f\n", sqrt(pow(p.vPer,2)+pow(p.vPar,2)));
@@ -539,7 +562,13 @@ int move_particle ( Cgc_particle &p, const Ctextures &textures,
 
 		// Update dt for the case where nu * dt is not << 1 even
 		// without goosing, i.e., uber cool particles E/T << 1
-		if() {
+#if GOOSE >= 1
+		if(!goose && dt_nu>0) {
+#else
+		if(dt_nu>0) {
+#endif
+			dt = dt_nu;
+			dt_nu = -1;
 		}
 
 		ii++;

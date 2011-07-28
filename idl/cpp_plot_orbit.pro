@@ -30,8 +30,6 @@ pro cpp_plot_orbit, color = color
 
 		nCdf_close,	cdfId 
 
-		;if stat eq 0 then begin
-
 			tleStr = string(f) + ' , ' + string (n_elements(rorb)) + ' ' + string(vPar)
 			c = contour ( eqdsk.psizr, eqdsk.r, eqdsk.z, $
 					aspect = 1.0, $
@@ -42,23 +40,11 @@ pro cpp_plot_orbit, color = color
 
 			x = rOrb * cos ( pOrb )
 			y = rOrb * sin ( pOrb )
-			;wset, 1
-			;!p.multi = [9-f,3,3]
-			;fsc_plot, lim_x, lim_y, aspect = 1.0
-			;fsc_plot, x, y, /over, thick = 2
-
-			;rg = max (lim_x)
-			;xplot3d, x, y, zOrb, $
-			;	   xRange = [-rg,rg], yRange = [-rg,rg], $
-			;   	zRange = [-rg,rg], xStyle = 1
 
 			ii++
 
-		;endif
-		
 		f++
 
-		;r=get_kbrd()
 	endwhile
 
 	!p.multi = 0
