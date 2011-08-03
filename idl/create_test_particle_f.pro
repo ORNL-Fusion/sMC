@@ -150,7 +150,8 @@ if keyword_set(plotf) then begin
 		for j=0,ny-1 do begin
 			ind = i+nx*j
 			if ri[ind] lt ri[ind+1] then begin
-				ret2[i,j] = total( weight[ri[ri[ind]:ri[ind+1]-1]] ) / (2*!pi*vPer_grid[j]*parSize*perSize)
+				dV = 2*!pi*vPer_grid[j]*parSize*perSize
+				ret2[i,j] = total( weight[ri[ri[ind]:ri[ind+1]-1]] ) / dV
 			endif
 		endfor
 	endfor
@@ -160,7 +161,7 @@ if keyword_set(plotf) then begin
 	c4 = contour ( ret2, vPar_grid, vPer_grid, aspect=1.0, c_value = levels )
 
 	v = sqrt ( vPer_grid_2D^2 + vPar_grid_2D^2 )
-	f_m_3_analytic = n_m_3 / (vTh^3) * exp ( -v^2 / (2*vTh^2) ) * sqrt ( 2.0 / !pi )
+	f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
 
 	c4 = contour ( f_m_3_analytic, vPar_grid, vPer_grid, aspect=1.0, c_value = levels, $
 		   /over, c_thick=levels*0+6.0, c_color = strArr(n_elements(levels))+'blue', $
@@ -173,15 +174,16 @@ if keyword_set(plotf) then begin
 	nP_check3 = 0.0
 	for i=0,nx-1 do begin
 		for j=0,ny-1 do begin
-			nP_check1 += ret[i,j] * 2 * !pi * vPer_grid[j] * parSize * perSize
-			nP_check2 += ret2[i,j] * 2 * !pi * vPer_grid[j] * parSize * perSize
-			nP_check3 += f_m_3_analytic[i,j] * 2 * !pi * vPer_grid[j] * parSize * perSize
+			dV = 2 * !pi * vPer_grid[j] * parSize * perSize
+			nP_check1 += ret[i,j] * dV
+			nP_check2 += ret2[i,j] * dV
+			nP_check3 += f_m_3_analytic[i,j] * dV
 		endfor
 	endfor
 
 	print, nP_check1, nP_check2, nP_check3, nP*weight[0]
 
-	p = plot(f_m_3_analytic[nBinsPar/2,*]*vPer_grid*0.076, thick=6.0, transp = 80)
+	p = plot(f_m_3_analytic[nBinsPar/2,*]*vPer_grid, thick=6.0, transp = 80)
 	p = plot(ret2[nBinsPar/2,*]*vPer_grid, /over)
 
 endif
