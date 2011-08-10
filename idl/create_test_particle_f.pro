@@ -2,8 +2,10 @@ pro create_test_particle_f, $
 		single_energy = single_energy, $ ; all particles same energy
 		standard_maxwellian = standard_maxwellian, $ ; more particles near vTh
 		weighted_maxwellian = weighted_maxwellian, $ ; uniform v particle distrubution, weighting higher near vTh
+		cql3d = cql3d, $
 		per_offset = per_offset, $ ; % c
 		par_offset = par_offset, $ ; % c
+		eqdskFName = eqdskFName, $
 		plotf = plotf
 
 ; constants
@@ -15,7 +17,7 @@ c  = 3.0d8
 
 ; species
 
-amu	= 1.0
+amu	= 2.0
 Z   = 1.0
 q   = Z * e_
 m   = amu * mi
@@ -23,7 +25,7 @@ m   = amu * mi
 ; fileNames
 
 fName = 'fdis_D_40keV_D3D'
-eqdskFName	= 'data/g129x129_1051206002.01120.cmod'
+if not keyword_set(eqdskFName) then eqdskFName	= 'data/g129x129_1051206002.01120.cmod'
 eqdsk   = readGEQDSK ( eqdskFName )
 
 ; create f
@@ -133,6 +135,66 @@ if keyword_set(single_energy) then begin
 	weight = fltArr(nP) + n_m_3 / nP
 
 endif ; single energy
+
+if keyword_set(cql3d) then begin
+
+	cdfId = ncdf_open(cql3d)
+
+		ncdf_varGet, cdfId, 'vnorm', vnorm ; velocity (momentum-per-mass) norm cms/sec
+		ncdf_varGet, cdfId, 'enorm', enorm
+		ncdf_varGet, cdfId, 'f', f ; vnorm**3/(cm**3*(cm/sec)**3)
+		ncdf_varGet, cdfId, 'rya', rya
+		ncdf_varGet, cdfId, 'x', x ; normalized momentum-per-mass
+		ncdf_varGet, cdfId, 'y', y
+		ncdf_varGet, cdfId, 'iy_', iy_
+
+	nCdf_close,	cdfId 
+
+	; Create a grid to sample the pdf
+
+	nThermal = 5 
+	
+	nPtsPar = round((-1+sqrt(1+8*nP))/2)
+	parRange = vTh * nThermal * 2
+	parMin	= -parRange / 2d0
+	parSize = parRange / nPtsPar 
+	vPar_grid = dIndGen(nPtsPar)*parSize+parMin+parSize/2d0
+
+	nPtsPer = nPtsPar / 2
+	perRange = vTh * nThermal 
+	perMin	= 0d0
+	perSize = perRange / nPtsPer 
+	vPer_grid = dIndGen(nPtsPer)*perSize+perMin+perSize/2d0
+	
+	vPer_grid_2D = transpose(rebin ( vPer_grid, nPtsPer, nPtsPar ))
+	vPar_grid_2D = rebin ( vPar_grid, nPtsPar, nPtsPer )
+
+	i_rya = 15
+	f_ = f[0:iy_[i_rya]-1,*,i_rya]*1e6/vnorm^3*1d6
+
+	vMag_ms = x * vnorm * 1d-2
+	pitch_rad = y[0:iy_[i_rya]-1,i_rya]
+
+	vMag_ms_2D = transpose(rebin(vMag_ms,n_elements(vMag_ms),n_elements(pitch_rad)))
+	pitch_rad_2D = rebin(pitch_rad,n_elements(pitch_rad),n_elements(vMag_ms))
+
+	vPar_ms = cos(pitch_rad_2D[*]) * vMag_ms_2D[*]
+	vPer_ms = sqrt(vMag_ms_2D[*]^2-vPar_ms^2)
+
+	seed = 1.2
+	rand = randomN(seed,n_elements(vpar_ms))*1e-4
+
+	vPar_ms += rand
+	vPer_ms += abs(rand)
+	levels = 10.0^fIndGen(10)*1e-5
+	contour,  f_[*], vPar_ms, vPer_ms, /irreg, levels = levels
+
+	n_m_3 = 4d19
+	f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -vMag_ms^2 / (2*vTh^2) )
+
+stop
+
+endif
 
 pitch = vPar / vMag
 

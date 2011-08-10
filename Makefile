@@ -9,6 +9,7 @@ CUDADIR := /home/dg6/code/cuda/4.0/cuda
 CUDALIBDIR = ${CUDADIR}/lib64
 CUDA_ARCH := sm_13
 CUDA_SDK_DIR := /home/dg6/code/cuda/NVIDIA_GPU_Computing_SDK
+LIBCONFIGDIR := /home/dg6/code/libconfig
 
 # Catch for greendl.* (my laptop)
 
@@ -30,12 +31,12 @@ NVCC := $(CUDADIR)/bin/nvcc
 
 MODULES := src include
 
-INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(NETCDFDIR)/include -I$(CUDA_SDK_INC)
+INCLUDEFLAGS := -I$(ALGLIBDIR) -I$(CUDA_SDK_DIR) -I$(NETCDFDIR)/include -I$(CUDA_SDK_INC) -I$(LIBCONFIGDIR)/include
 CFLAGS := 
 CPPFLAGS := -g -pg 
 NVCCFLAGS := --compiler-bindir $(GCCDIR) -arch $(CUDA_ARCH) --ptxas-options=-v #-g -G 
-LFLAGS := -L$(NETCDFDIR)/lib -L$(CUDALIBDIR) 
-LIBS := $(ALGLIBDIR)/*.o -lcuda -lcudart -lnetcdf_c++ -lnetcdf
+LFLAGS := -L$(NETCDFDIR)/lib -L$(CUDALIBDIR) -L$(LIBCONFIGDIR)/lib
+LIBS := $(ALGLIBDIR)/*.o -lcuda -lcudart -lnetcdf_c++ -lnetcdf -lconfig++
 
 USECUDA:=0
 DEBUG:=3

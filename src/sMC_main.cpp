@@ -8,19 +8,41 @@
 #include "interp.hpp"
 #include "rkf.hpp"
 #include "cuda_wrap.hpp"
+#include <libconfig.h++>
 
 using namespace std;
 
 int main ()
 {
 
+	// Create and write a config file
+	libconfig::Config cfg;
+	string cfgName = "sMC.cfg";
+
+	// Write file
+	//libconfig::Setting &root = cfg.getRoot();
+	//root.add("Z", libconfig::Setting::TypeInt) = 1;
+	//root.add("amu", libconfig::Setting::TypeInt) = 1;
+	//root.add("nRow", libconfig::Setting::TypeInt) = 512;
+	//root.add("nCol", libconfig::Setting::TypeInt) = 256;
+	//root.add("eqdskPath", libconfig::Setting::TypeString) = "data/eqdsk";
+	//cfg.writeFile(cfgName.c_str());
+
+	// Read file
+	cfg.readFile(cfgName.c_str());
+	int _Z = cfg.lookup("Z");
+	int amu = cfg.lookup("amu");
+	unsigned int nRow = cfg.lookup("nRow");
+	unsigned int nCol = cfg.lookup("nCol");
+	string fName = cfg.lookup("eqdskPath");
+
 	cout << "sMC ... c++ & CUDA version :)" << endl;
 
-    int _Z = 1;
-    int amu = 1;
-	unsigned int nRow = 512, nCol = 256;
+    //int _Z = 1;
+    //int amu = 1;
+	//unsigned int nRow = 512, nCol = 256;
 
-	string fName = "data/eqdsk";
+	//string fName = "data/eqdsk";
 	//string fName = "data/g122080.03100";
 
 	Ceqdsk eqdsk;	
