@@ -43,7 +43,7 @@ pro v_hist, vPer, vPar, weight, vTh, $
 	ny = n_elements(ret_weighted[0,*])
 
 	; Need to find the area for a single kernel for normalization to unity
-	sigma = 0.7e5
+	sigma = 1.5e5
 	single_kernel = fltArr(size(ret_unweighted,/dim))
 	for i=0,nx-1 do begin
 		for j=0,ny-1 do begin

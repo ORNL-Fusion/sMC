@@ -1,0 +1,10 @@
+div#log { 
+		color: blue;
+		background-color: #E8E8E8;
+		border-style: dashed;
+		border-width: 1px;
+		position: absolute;
+		top:0;
+		right:0;
+		width:600px;
+ }

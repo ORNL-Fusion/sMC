@@ -32,7 +32,7 @@ eqdsk   = readGEQDSK ( eqdskFName )
 
 nP    = 1000L
 n_m_3 = 4d19
-E_keV = 2d0
+E_keV = 20d0
 T_joule = 2d0/3d0 * E_keV * 1d3 * e_
 vTh = sqrt ( T_joule / (mi*amu) )
 
@@ -169,30 +169,41 @@ if keyword_set(cql3d) then begin
 	vPer_grid_2D = transpose(rebin ( vPer_grid, nPtsPer, nPtsPar ))
 	vPar_grid_2D = rebin ( vPar_grid, nPtsPar, nPtsPer )
 
-	i_rya = 15
-	f_ = f[0:iy_[i_rya]-1,*,i_rya]*1e6/vnorm^3*1d6
+	vMag_ms_grid = sqrt(vPer_grid_2D^2+vPar_grid_2D^2)
+	pitch_rad_grid = acos(vPar_grid_2D / vMag_ms_grid)
 
-	vMag_ms = x * vnorm * 1d-2
-	pitch_rad = y[0:iy_[i_rya]-1,i_rya]
+	i_rya = 4 
+	;i_time = 0
+	f_cql = f[0:iy_[i_rya]-1,*,i_rya]*1e6/vnorm^3*1d6
 
-	vMag_ms_2D = transpose(rebin(vMag_ms,n_elements(vMag_ms),n_elements(pitch_rad)))
-	pitch_rad_2D = rebin(pitch_rad,n_elements(pitch_rad),n_elements(vMag_ms))
+	vMag_ms_cql = x * vnorm * 1d-2
+	pitch_rad_cql = y[0:iy_[i_rya]-1,i_rya]
 
-	vPar_ms = cos(pitch_rad_2D[*]) * vMag_ms_2D[*]
-	vPer_ms = sqrt(vMag_ms_2D[*]^2-vPar_ms^2)
+	; Get f_ values at grid locations
+	f_interp = interpolate ( f_cql, $
+		(pitch_rad_grid-min(pitch_rad_cql))/(max(pitch_rad_cql)-min(pitch_rad_cql))*(n_elements(pitch_rad_cql)-1), $
+		(vMag_ms_grid-min(vMag_ms_cql))/(max(vMag_ms_cql)-min(vMag_ms_cql))*(n_elements(vMag_ms_cql)-1))
+
+	vMag_ms_2D_cql = transpose(rebin(vMag_ms_cql,n_elements(vMag_ms_cql),n_elements(pitch_rad_cql)))
+	pitch_rad_2D_cql = rebin(pitch_rad_cql,n_elements(pitch_rad_cql),n_elements(vMag_ms_cql))
+
+	vPar_ms_cql = cos(pitch_rad_2D_cql[*]) * vMag_ms_2D_cql[*]
+	vPer_ms_cql = sqrt(vMag_ms_2D_cql[*]^2-vPar_ms_cql^2)
 
 	seed = 1.2
-	rand = randomN(seed,n_elements(vpar_ms))*1e-4
+	rand = randomN(seed,n_elements(vpar_ms_cql))*1e-4
 
-	vPar_ms += rand
-	vPer_ms += abs(rand)
-	levels = 10.0^fIndGen(10)*1e-5
-	contour,  f_[*], vPar_ms, vPer_ms, /irreg, levels = levels
+	vPar_ms_cql += rand
+	vPer_ms_cql += abs(rand)
+	levels = 10.0^fIndGen(20)*1e-18
+	contour,  f_cql[*], vPar_ms_cql/vTh, vPer_ms_cql/vTh, /irreg, levels = levels, /iso
 
-	n_m_3 = 4d19
-	f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -vMag_ms^2 / (2*vTh^2) )
+	dV = 2 * !pi * vPer_grid_2D * perSize * parSize
 
-stop
+	weight = f_interp[*] * dV[*]
+	vPar = vPar_grid_2D[*]
+	vPer = vPer_grid_2D[*]
+	vMag = sqrt ( vPer^2 + vPar^2 )
 
 endif
 
@@ -219,7 +230,7 @@ if keyword_set(plotf) then begin
 		nBinsPer = 50, $
 		nBinsPar = 101
 
-	levels = 10.0^fIndGen(10)*1e-5
+	levels = 10.0^fIndGen(25)*1e-15
 	c3 = contour ( f_weighted, vPar_grid/vTh, vPer_grid/vTh, aspect=1.0, c_value = levels ) 
 	c4 = contour ( f_KED  , vPar_grid/vTh, vPer_grid/vTh, aspect=1.0, c_value = levels )
 
