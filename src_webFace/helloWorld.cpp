@@ -24,7 +24,7 @@ class HelloApp : public Wt::WApplication
 
 			void greet();
 			void fileUploaded();
-			void selectRun(bf::path *path);
+			void selectRun(Wt::WText *text);
 			void logEntry(const std::string &text);
 };
 
@@ -57,12 +57,12 @@ HelloApp::HelloApp(const Wt::WEnvironment &env) : Wt::WApplication(env)
 		cfg_upload_->uploaded().connect(this, &HelloApp::fileUploaded);
 
 		// List runs in scratch
-
 		root()->addWidget(new Wt::WBreak());
 		bf::path scratch ("/home/dg6/scratch/sMC");
 		Wt::WTable *runTable = new Wt::WTable(runContainer_);
-		Wt::WSignalMapper<bf::path *> *runMap = new Wt::WSignalMapper<bf::path *>(this);
+		Wt::WSignalMapper<Wt::WText *> *runMap = new Wt::WSignalMapper<Wt::WText *>(this);
 		runMap->mapped().connect(this, &HelloApp::selectRun);
+		std::vector<Wt::WText *> runs;
 
 		if(bf::exists(scratch)) {
 				if(bf::is_directory(scratch)) {
@@ -74,9 +74,10 @@ HelloApp::HelloApp(const Wt::WEnvironment &env) : Wt::WApplication(env)
 					copy(bf::directory_iterator(scratch),
 									bf::directory_iterator(), back_inserter(v));
 					for(int i=0;i<v.size();i++) {
-						runTable->elementAt(i,0)->addWidget(new Wt::WText(v[i].string()));
-						runMap->mapConnect(runTable->elementAt(i,0)->clicked(),&v[i]);
-						//runTable->elementAt(i,0)->clicked().connect(this, &HelloApp::selectRun);
+						runs.push_back(new Wt::WText(v[i].string()));
+						runContainer_->addWidget(runs[i]);
+						runContainer_->addWidget(new Wt::WBreak());
+						runMap->mapConnect(runs[i]->clicked(),runs[i]);
 					}
 				}
 		}
@@ -89,14 +90,14 @@ HelloApp::HelloApp(const Wt::WEnvironment &env) : Wt::WApplication(env)
 
 void HelloApp::logEntry(const std::string &text)
 {
-		logContainer_->addWidget(new Wt::WBreak());
 		logContainer_->addWidget(new Wt::WText(text));
+		logContainer_->addWidget(new Wt::WBreak());
 }
 
-void HelloApp::selectRun(bf::path *path)
+void HelloApp::selectRun(Wt::WText *text)
 {
+		logContainer_->addWidget(new Wt::WText(text->text()));
 		logContainer_->addWidget(new Wt::WBreak());
-		logContainer_->addWidget(new Wt::WText((*path).string()));
 }
 
 void HelloApp::fileUploaded()
