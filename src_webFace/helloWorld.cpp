@@ -26,6 +26,7 @@ class HelloApp : public Wt::WApplication
 			void fileUploaded();
 			void selectRun(Wt::WText *text);
 			void logEntry(const std::string &text);
+			void logEntryColored(const std::string &text, const std::string &color);
 };
 
 HelloApp::HelloApp(const Wt::WEnvironment &env) : Wt::WApplication(env)
@@ -90,14 +91,32 @@ HelloApp::HelloApp(const Wt::WEnvironment &env) : Wt::WApplication(env)
 
 void HelloApp::logEntry(const std::string &text)
 {
-		logContainer_->addWidget(new Wt::WText(text));
+		logEntryColored(text,"black");
+}
+
+void HelloApp::logEntryColored(const std::string &text, const std::string &color)
+{
+		Wt::WText *tmpText = new Wt::WText(text);
+		tmpText->decorationStyle().setForegroundColor(Wt::WColor(color));
+		logContainer_->addWidget(tmpText);
 		logContainer_->addWidget(new Wt::WBreak());
 }
 
 void HelloApp::selectRun(Wt::WText *text)
 {
-		logContainer_->addWidget(new Wt::WText(text->text()));
-		logContainer_->addWidget(new Wt::WBreak());
+		// Add output
+		logEntry(text->text().narrow());
+
+		// Search for .cfg file
+		bf::path cfgPath (text->text().narrow()+"/sMC.cfg");
+		bool cfgFound = bf::exists(cfgPath);
+		if(cfgFound) {
+			logEntry("Found sMC.cfg file :)");
+		}
+		else
+		{
+			logEntryColored("ERROR: Could not find sMC.cfg file","red");
+		}
 }
 
 void HelloApp::fileUploaded()
