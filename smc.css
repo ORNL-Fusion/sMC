@@ -7,5 +7,25 @@ div#log {
 		top:0;
 		right:0;
 		width:600px;
+		height:300px;
+		overflow:auto;
  }
 
+div#cfg {
+		background-color: #E8E8E8;
+		border-style: dashed;
+		border-width: 1px;
+		position: absolute;
+		top: 310px;
+		right: 0px;
+		width: 600px;
+		height: 300px;
+ }
+
+div#runList {
+	background-color: #E8E8E8;
+	color: green;
+	border-style: dashed;
+	border-width: 1px;
+	overflow: auto;
+}

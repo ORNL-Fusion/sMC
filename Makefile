@@ -126,11 +126,12 @@ clean:
 allclean: 
 	-@rm $(NAME) $(OBJ) $(DEP) .dep/src/* webFace.wt src_webFace/*.o
 
-webFace.wt: src_webFace/helloWorld.o
-	g++ -o $@ $< -L ~/code/wt/lib -lwt -lwthttp -lboost_signals-mt -lboost_filesystem-mt -lboost_system-mt
+webFace.wt: src_webFace/webFaceApp.o
+	g++ -o $@ $< -L ~/code/wt/lib -lwt -lwthttp -lboost_signals-mt -lboost_filesystem-mt -lboost_system-mt \
+			-L$(LIBCONFIGDIR)/lib -lconfig++
 	@echo 'Run webApp using ...'
 	@echo 'WT_TMP_DIR=/home/dg6/code/sMC/tmp ./webFace.wt --docroot ./ --http-address 0.0.0.0 --http-port 8080 -c ./wt_config.xml'
 
-src_webFace/helloWorld.o: src_webFace/helloWorld.cpp
-	g++ -c $< -I ~/code/wt/include -o $@
+src_webFace/webFaceApp.o: src_webFace/webFaceApp.cpp
+	g++ -c $< -I ~/code/wt/include -o $@ -I$(LIBCONFIGDIR)/include
 
