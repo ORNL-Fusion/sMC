@@ -6,7 +6,8 @@ pro create_test_particle_f, $
 		per_offset = per_offset, $ ; % c
 		par_offset = par_offset, $ ; % c
 		eqdskFName = eqdskFName, $
-		plotf = plotf
+		plotf = plotf, $
+		rsfwc_1d = rsfwc_1d ; set this to the rsfwc_1d.nc output file
 
 ; constants
 
@@ -14,44 +15,74 @@ k  = 1.3806504d-23
 e_ = 1.60217646d-19
 mi = 1.67262158d-27
 c  = 3.0d8
+_me_mi = 0.000544617
 
 ; species
 
-amu	= 2.0
-Z   = 1.0
+amu	= _me_mi 
+Z   = -1.0
 q   = Z * e_
 m   = amu * mi
-
-; fileNames
-
-fName = 'fdis_D_40keV_D3D'
-if not keyword_set(eqdskFName) then eqdskFName	= 'data/g129x129_1051206002.01120.cmod'
-eqdsk   = readGEQDSK ( eqdskFName )
 
 ; create f
 
 nP    = 1000L
 n_m_3 = 4d19
-E_keV = 20d0
+E_keV = 0.02d0
 T_joule = 2d0/3d0 * E_keV * 1d3 * e_
 vTh = sqrt ( T_joule / (mi*amu) )
 
 ; Spatial point
 
-x_r = fltArr(nP) + (max(eqdsk.rbbbs)-eqdsk.rmaxis)/2 + eqdsk.rmaxis
+x_r = fltArr(nP) + 1.1;(max(eqdsk.rbbbs)-eqdsk.rmaxis)/2 + eqdsk.rmaxis
 x_z = fltArr(nP)*0.0
 x_p = fltArr(nP)*0.0
 
+x_x = x_r * cos ( x_p )
+x_y = x_r * sin ( x_p )
+
 print, 'R: ', x_r[0]
+
+fName = 'f_0.02keV_electrons'
 
 ;   Interpolate B to particle locations
 
-b_r  = interpolate ( eqdsk.bR, ( x_r - eqdsk.rleft ) / eqdsk.rdim * (eqdsk.nW-1.0), $
-    ( x_z - min ( eqdsk.z ) ) / eqdsk.zdim * (eqdsk.nH-1.0) )
-b_p  = interpolate ( eqdsk.bPhi, ( x_r - eqdsk.rleft ) / eqdsk.rdim * (eqdsk.nW-1.0), $
-    ( x_z - min ( eqdsk.z ) ) / eqdsk.zdim * (eqdsk.nH-1.0) )
-b_z  = interpolate ( eqdsk.bz, ( x_r - eqdsk.rleft ) / eqdsk.rdim * (eqdsk.nW-1.0), $
-    ( x_z - min ( eqdsk.z ) ) / eqdsk.zdim * (eqdsk.nH-1.0) )
+if ( NOT keyword_set ( rsfwc_1d ) ) then begin
+
+	if not keyword_set(eqdskFName) then eqdskFName	= 'data/g129x129_1051206002.01120.cmod'
+	eqdsk   = readGEQDSK ( eqdskFName )
+
+	r_b0 = eqdsk.r
+	z_b0 = eqdsk.z
+	b0_r = eqdsk.br
+	b0_p = eqdsk.bphi
+	b0_z = eqdsk.bz
+
+	b_r  = interpolate ( b0_r, ( x_r - min(r_b0) ) / (max(r_b0)-min(r_b0)) * (n_elements(r_b0)-1.0), $
+	    ( x_z - min (z_b0) ) / (max(z_b0)-min(z_b0)) * (n_elements(z_b0)-1.0) )
+	b_p  = interpolate ( b0_p, ( x_r - min(r_b0) ) / (max(r_b0)-min(r_b0)) * (n_elements(r_b0)-1.0), $
+	    ( x_z - min (z_b0) ) / (max(z_b0)-min(z_b0)) * (n_elements(z_b0)-1.0) )
+	b_z  = interpolate ( b0_z, ( x_r - min(r_b0) ) / (max(r_b0)-min(r_b0)) * (n_elements(r_b0)-1.0), $
+	    ( x_z - min (z_b0) ) / (max(z_b0)-min(z_b0)) * (n_elements(z_b0)-1.0) )
+
+endif else begin
+
+	cdfId = ncdf_open(rsfwc_1d)
+
+		ncdf_varget, cdfId, 'B0_r', b0_r 
+		ncdf_varget, cdfId, 'B0_p', b0_p
+		ncdf_varget, cdfId, 'B0_z', b0_z
+		ncdf_varget, cdfId, 'r', r_b0
+
+	nCdf_close,	cdfId 
+
+	z_b0 = r_b0 * 0
+
+	b_r  = interpolate ( b0_r, ( x_r - min(r_b0) ) / (max(r_b0)-min(r_b0)) * (n_elements(r_b0)-1.0) )
+	b_p  = interpolate ( b0_p, ( x_r - min(r_b0) ) / (max(r_b0)-min(r_b0)) * (n_elements(r_b0)-1.0) )
+	b_z  = interpolate ( b0_z, ( x_r - min(r_b0) ) / (max(r_b0)-min(r_b0)) * (n_elements(r_b0)-1.0) )
+
+endelse
 
 bMag    = sqrt ( b_r^2 + b_p^2 + b_z^2 )
 
@@ -110,7 +141,6 @@ if keyword_set(standard_maxwellian) then begin
 	v_r	=  cos ( x_p ) * v_x + sin ( x_p ) * v_y
 	v_p	= -sin ( x_p ) * v_x + cos ( x_p ) * v_y
 	
-
 	vMag = sqrt ( v_x^2 + v_y^2 + v_z^2 )
 	vPar = v_r * bu_r + v_z * bu_z + v_p * bu_p
 	vPer = sqrt ( vMag^2 - vPar^2 )
@@ -279,13 +309,20 @@ endif
 	
 	vPer_id = nCdf_varDef ( nc_id, 'vPer', np_id, /float )
 	vPar_id = nCdf_varDef ( nc_id, 'vPar', np_id, /float )
+	if keyword_set(standard_maxwellian) AND ( NOT keyword_set(per_offset) ) then begin
+		vx_id = nCdf_varDef ( nc_id, 'vx', np_id, /float )
+		vy_id = nCdf_varDef ( nc_id, 'vy', np_id, /float )
+		vz_id = nCdf_varDef ( nc_id, 'vz', np_id, /float )
+	endif
 	E_eV_id = nCdf_varDef ( nc_id, 'E_eV', np_id, /float )
 	r_id = nCdf_varDef ( nc_id, 'r', np_id, /float )
 	p_id = nCdf_varDef ( nc_id, 'p', np_id, /float )
 	z_id = nCdf_varDef ( nc_id, 'z', np_id, /float )
+	x_id = nCdf_varDef ( nc_id, 'x', np_id, /float )
+	y_id = nCdf_varDef ( nc_id, 'y', np_id, /float )
 	weight_id = nCdf_varDef ( nc_id, 'weight', np_id, /float )
 	status_id = nCdf_varDef ( nc_id, 'status', np_id, /short )
-	amu_id = nCdf_varDef ( nc_id, 'amu', np_id, /short )
+	amu_id = nCdf_varDef ( nc_id, 'amu', np_id, /float )
 	_Z_id = nCdf_varDef ( nc_id, 'Z', np_id, /short )
 	mu_id = nCdf_varDef ( nc_id, 'mu', np_id, /float )
 
@@ -294,6 +331,8 @@ endif
 	nCdf_varPut, nc_id, r_id, x_r
 	nCdf_varPut, nc_id, p_id, x_p 
 	nCdf_varPut, nc_id, z_id, x_z 
+	nCdf_varPut, nc_id, x_id, x_x 
+	nCdf_varPut, nc_id, y_id, x_y 
 	nCdf_varPut, nc_id, vPer_id, vPer 
 	nCdf_varPut, nc_id, vPar_id, vPar 
 	nCdf_varPut, nc_id, weight_id, weight
@@ -302,6 +341,11 @@ endif
 	nCdf_varPut, nc_id, amu_id, amu + intArr(nP)
 	nCdf_varPut, nc_id, _Z_id, Z + intArr(nP)
 	nCdf_varPut, nc_id, mu_id, mu
+	if keyword_set(standard_maxwellian) AND ( NOT keyword_set(per_offset) ) then begin
+		nCdf_varPut, nc_id, vx_id, v_x 
+		nCdf_varPut, nc_id, vy_id, v_y 
+		nCdf_varPut, nc_id, vz_id, v_z 
+	endif
 
 nCdf_close, nc_id
 
