@@ -2,6 +2,7 @@ pro create_test_particle_f, $
 		single_energy = single_energy, $ ; all particles same energy
 		standard_maxwellian = standard_maxwellian, $ ; more particles near vTh
 		weighted_maxwellian = weighted_maxwellian, $ ; uniform v particle distrubution, weighting higher near vTh
+		weighted_maxwellian_XYZ = weighted_maxwellian_XYZ, $ ; for kineticj
 		cql3d = cql3d, $
 		per_offset = per_offset, $ ; % c
 		par_offset = par_offset, $ ; % c
@@ -9,32 +10,120 @@ pro create_test_particle_f, $
 		plotf = plotf, $
 		rsfwc_1d = rsfwc_1d ; set this to the rsfwc_1d.nc output file
 
-; constants
+@constants
 
-k  = 1.3806504d-23
-e_ = 1.60217646d-19
-mi = 1.67262158d-27
-c  = 3.0d8
-_me_mi = 0.000544617
+e_ = e
 
 ; species
 
 amu	= _me_mi 
 Z   = -1.0
+;amu = 1 
+;Z = 1.0
 q   = Z * e_
 m   = amu * mi
 
 ; create f
 
 nP    = 1000L
-n_m_3 = 4d19
-E_keV = 0.02d0
+n_m_3 = 1.1d14
+E_keV = 0.5
 T_joule = 2d0/3d0 * E_keV * 1d3 * e_
-vTh = sqrt ( T_joule / (mi*amu) )
+vTh = sqrt ( T_joule / m )
+
+fName = 'f_0.5keV_e'
+
+if keyword_set(weighted_maxwellian_XYZ) then begin
+
+	; Create a grid to sample the pdf
+
+	nDim = 1
+	nThermal = 5 
+
+	if nDim eq 3 then begin
+
+		nPts_vx = 400
+		vxRange = vTh * nThermal * 2
+		vxMin	= -vxRange / 2d0
+		vxSize = vxRange / nPts_vx
+		vx_grid = dIndGen(nPts_vx)*vxSize+vxMin+vxSize/2d0
+
+		nPts_vy = 10
+		vyRange = vTh * nThermal * 2
+		vyMin	= -vyRange / 2d0
+		vySize = vyRange / nPts_vy
+		vy_grid = dIndGen(nPts_vy)*vySize+vyMin+vySize/2d0
+
+		nPts_vz = 10
+		vzRange = vTh * nThermal * 2
+		vzMin	= -vzRange / 2d0
+		vzSize = vzRange / nPts_vz
+		vz_grid = dIndGen(nPts_vz)*vzSize+vzMin+vzSize/2d0
+
+		vx_grid_3D = rebin ( vx_grid, nPts_vx, nPts_vy, nPts_vz )
+		vy_grid_3D = transpose(rebin ( vy_grid, nPts_vy, nPts_vz, nPts_vx ),[2,0,1])
+		vz_grid_3D = transpose(rebin ( vz_grid, nPts_vz, nPts_vx, nPts_vy ),[1,2,0])
+		nP = nPts_vx * nPts_vy * nPts_vz
+
+		v = sqrt ( vx_grid_3D^2 + vy_grid_3D^2 + vz_grid_3D^2 )
+		f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
+
+		; Check the density at this point
+
+		dV = vxSize * vySize * vzSize
+
+		print, "Density: ", total(f_m_3_analytic)*dV
+
+		weight = f_m_3_analytic[*]*dV
+		v_x = vx_grid_3D[*]
+		v_y = vy_grid_3D[*]
+		v_z = vz_grid_3D[*]
+		vPer = v_x*0
+		vPar = v_y*0
+		vMag = sqrt ( v_x^2 + v_y^2 + v_z^2 )
+	endif
+
+	if nDim eq 1 then begin
+
+		nPts_vx = 1000
+		vxRange = vTh * nThermal * 2
+		vxMin	= -vxRange / 2d0
+		vxSize = vxRange / nPts_vx
+		vx_grid = dIndGen(nPts_vx)*vxSize+vxMin+vxSize/2d0
+
+		vy = 0
+		vz = 0
+
+		nP = nPts_vx
+
+		vx_grid_1D = vx_grid
+		vy_grid_1D = fltArr(nP) + vy
+		vz_grid_1D = fltArr(nP) + vz
+
+		v = sqrt ( vx_grid_1d^2 + vy_grid_1d^2 + vz_grid_1d^2 )
+		f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
+
+		dV = n_m_3 / total(f_m_3_analytic)
+
+		print, "Density: ", total(f_m_3_analytic)*dV
+
+		weight = f_m_3_analytic[*]*dV
+		v_x = vx_grid_1D[*]
+		v_y = vy_grid_1D[*]
+		v_z = vz_grid_1D[*]
+
+		; Placeholders
+		vPer = v_y*0 
+		vPar = v_y*0
+		vMag = sqrt ( v_x^2 + v_y^2 + v_z^2 )
+
+	endif
+	stop
+endif
 
 ; Spatial point
 
-x_r = fltArr(nP) + 1.1;(max(eqdsk.rbbbs)-eqdsk.rmaxis)/2 + eqdsk.rmaxis
+x_r = fltArr(nP) + 10.0;(max(eqdsk.rbbbs)-eqdsk.rmaxis)/2 + eqdsk.rmaxis
 x_z = fltArr(nP)*0.0
 x_p = fltArr(nP)*0.0
 
@@ -42,8 +131,6 @@ x_x = x_r * cos ( x_p )
 x_y = x_r * sin ( x_p )
 
 print, 'R: ', x_r[0]
-
-fName = 'f_0.02keV_electrons'
 
 ;   Interpolate B to particle locations
 
@@ -306,13 +393,17 @@ endif
 	nCdf_control, nc_id, /fill
 	
 	np_id = nCdf_dimDef ( nc_id, 'nP', nP )
-	
+	scalar_id = nCdf_dimDef ( nc_id, 'scalar', 1 )
+
 	vPer_id = nCdf_varDef ( nc_id, 'vPer', np_id, /float )
 	vPar_id = nCdf_varDef ( nc_id, 'vPar', np_id, /float )
-	if keyword_set(standard_maxwellian) AND ( NOT keyword_set(per_offset) ) then begin
+	if (keyword_set(standard_maxwellian) OR keyword_set(weighted_maxwellian_XYZ)) $
+		AND ( NOT keyword_set(per_offset) ) then begin
 		vx_id = nCdf_varDef ( nc_id, 'vx', np_id, /float )
 		vy_id = nCdf_varDef ( nc_id, 'vy', np_id, /float )
 		vz_id = nCdf_varDef ( nc_id, 'vz', np_id, /float )
+		nThermal_id = nCdf_varDef ( nc_id, 'nThermal', scalar_id, /short )
+		vTh_id = nCdf_varDef ( nc_id, 'vTh', scalar_id, /float )
 	endif
 	E_eV_id = nCdf_varDef ( nc_id, 'E_eV', np_id, /float )
 	r_id = nCdf_varDef ( nc_id, 'r', np_id, /float )
@@ -341,10 +432,13 @@ endif
 	nCdf_varPut, nc_id, amu_id, amu + intArr(nP)
 	nCdf_varPut, nc_id, _Z_id, Z + intArr(nP)
 	nCdf_varPut, nc_id, mu_id, mu
-	if keyword_set(standard_maxwellian) AND ( NOT keyword_set(per_offset) ) then begin
+	if (keyword_set(standard_maxwellian) OR keyword_set(weighted_maxwellian_XYZ)) $
+		   	AND ( NOT keyword_set(per_offset) ) then begin
 		nCdf_varPut, nc_id, vx_id, v_x 
 		nCdf_varPut, nc_id, vy_id, v_y 
 		nCdf_varPut, nc_id, vz_id, v_z 
+		nCdf_varPut, nc_id, nThermal_id, nThermal
+		nCdf_varPut, nc_id, vTh_id, vTh
 	endif
 
 nCdf_close, nc_id
