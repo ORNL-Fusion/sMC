@@ -1,6 +1,7 @@
 pro create_test_particle_f, $
 		single_energy = single_energy, $ ; all particles same energy
 		standard_maxwellian = standard_maxwellian, $ ; more particles near vTh
+		standard_maxwellian_1d = standard_maxwellian_1d, $ ; more particles near vTh
 		weighted_maxwellian = weighted_maxwellian, $ ; uniform v particle distrubution, weighting higher near vTh
 		weighted_maxwellian_XYZ = weighted_maxwellian_XYZ, $ ; for kineticj
 		cql3d = cql3d, $
@@ -8,7 +9,8 @@ pro create_test_particle_f, $
 		par_offset = par_offset, $ ; % c
 		eqdskFName = eqdskFName, $
 		plotf = plotf, $
-		rsfwc_1d = rsfwc_1d ; set this to the rsfwc_1d.nc output file
+		rsfwc_1d = rsfwc_1d, $ ; set this to the rsfwc_1d.nc output file
+		energy_keV = energy_keV
 
 @constants
 
@@ -25,36 +27,40 @@ m   = amu * mi
 
 ; create f
 
-nP    = 1000L
+nP    = 40000L
 n_m_3 = 1.1d14
-E_keV = 0.5
-T_joule = 2d0/3d0 * E_keV * 1d3 * e_
-vTh = sqrt ( T_joule / m )
 
-fName = 'f_0.5keV_e'
+if keyword_set(energy_keV) then E_keV = energy_keV else E_keV = 0.3
+
+kT_joule = E_keV * 1d3 * e_
+vTh = sqrt ( 2.0*kT_joule / m )
+
+print, 'vTh: ', vTh
+
+fName = 'f_0.5keV_e_weighted_500_kt'
 
 if keyword_set(weighted_maxwellian_XYZ) then begin
 
 	; Create a grid to sample the pdf
 
 	nDim = 1
-	nThermal = 5 
+	nThermal = 3 
 
 	if nDim eq 3 then begin
 
-		nPts_vx = 400
+		nPts_vx = 100
 		vxRange = vTh * nThermal * 2
 		vxMin	= -vxRange / 2d0
 		vxSize = vxRange / nPts_vx
 		vx_grid = dIndGen(nPts_vx)*vxSize+vxMin+vxSize/2d0
 
-		nPts_vy = 10
+		nPts_vy =3 
 		vyRange = vTh * nThermal * 2
 		vyMin	= -vyRange / 2d0
 		vySize = vyRange / nPts_vy
 		vy_grid = dIndGen(nPts_vy)*vySize+vyMin+vySize/2d0
 
-		nPts_vz = 10
+		nPts_vz =1
 		vzRange = vTh * nThermal * 2
 		vzMin	= -vzRange / 2d0
 		vzSize = vzRange / nPts_vz
@@ -66,11 +72,12 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 		nP = nPts_vx * nPts_vy * nPts_vz
 
 		v = sqrt ( vx_grid_3D^2 + vy_grid_3D^2 + vz_grid_3D^2 )
-		f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
+		;f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
+		f_m_3_analytic = exp ( -v^2 / vTh^2 )
 
 		; Check the density at this point
 
-		dV = vxSize * vySize * vzSize
+		dV = n_m_3 / total ( f_m_3_analytic )
 
 		print, "Density: ", total(f_m_3_analytic)*dV
 
@@ -85,7 +92,7 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 
 	if nDim eq 1 then begin
 
-		nPts_vx = 1000
+		nPts_vx = 500
 		vxRange = vTh * nThermal * 2
 		vxMin	= -vxRange / 2d0
 		vxSize = vxRange / nPts_vx
@@ -101,7 +108,8 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 		vz_grid_1D = fltArr(nP) + vz
 
 		v = sqrt ( vx_grid_1d^2 + vy_grid_1d^2 + vz_grid_1d^2 )
-		f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
+		;f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
+		f_m_3_analytic = exp ( -v^2 / vTh^2 )
 
 		dV = n_m_3 / total(f_m_3_analytic)
 
@@ -116,9 +124,10 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 		vPer = v_y*0 
 		vPar = v_y*0
 		vMag = sqrt ( v_x^2 + v_y^2 + v_z^2 )
-
+		;p=plot(v_x/vTh,weight,xtitle='v/vTh')
+		;stop
 	endif
-	stop
+	
 endif
 
 ; Spatial point
@@ -241,7 +250,48 @@ if keyword_set(standard_maxwellian) then begin
 	if keyword_set(par_offset) OR keyword_set(per_offset) then $
 			vMag = sqrt ( vPer^2 + vPar^2 )
 
+	print, 'Density: ', total (weight)
+
 endif ; standard_mawellian
+
+if keyword_set(standard_maxwellian_1d) then begin
+
+	; Create a template Maxwellian for a single spatial point
+	
+	randX	= randomN ( undefined, nP )
+	randY	= randomN ( undefined, nP )
+	randZ	= randomN ( undefined, nP )
+
+	v_x = randX * vTh
+	v_y = randY * 0
+	v_z = randZ * 0
+
+	;	Convert velocity vector to cylindrical
+	;	pg. 39, Cheng.
+	
+	v_r	=  cos ( x_p ) * v_x + sin ( x_p ) * v_y
+	v_p	= -sin ( x_p ) * v_x + cos ( x_p ) * v_y
+	
+	vMag = sqrt ( v_x^2 + v_y^2 + v_z^2 )
+	vPar = v_r * bu_r + v_z * bu_z + v_p * bu_p
+	vPer = sqrt ( vMag^2 - vPar^2 )
+
+	weight = fltArr(nP) + n_m_3 / nP
+
+	if keyword_set(per_offset) then $
+			vPer = vPer + per_offset * c
+	if keyword_set(par_offset) then $
+			vPar = vPar + par_offset * c
+	if keyword_set(par_offset) OR keyword_set(per_offset) then $
+			vMag = sqrt ( vPer^2 + vPar^2 )
+
+	print, 'Density: ', total (weight)
+
+	h = histogram ( v_x/vTh, binSize = 0.05, locations = locations )
+	p = barplot ( locations, h )	
+
+endif ; standard_mawellian
+
 
 
 if keyword_set(single_energy) then begin
@@ -397,7 +447,7 @@ endif
 
 	vPer_id = nCdf_varDef ( nc_id, 'vPer', np_id, /float )
 	vPar_id = nCdf_varDef ( nc_id, 'vPar', np_id, /float )
-	if (keyword_set(standard_maxwellian) OR keyword_set(weighted_maxwellian_XYZ)) $
+	if (keyword_set(standard_maxwellian) OR keyword_set(standard_maxwellian_1d) OR keyword_set(weighted_maxwellian_XYZ)) $
 		AND ( NOT keyword_set(per_offset) ) then begin
 		vx_id = nCdf_varDef ( nc_id, 'vx', np_id, /float )
 		vy_id = nCdf_varDef ( nc_id, 'vy', np_id, /float )
@@ -432,16 +482,17 @@ endif
 	nCdf_varPut, nc_id, amu_id, amu + intArr(nP)
 	nCdf_varPut, nc_id, _Z_id, Z + intArr(nP)
 	nCdf_varPut, nc_id, mu_id, mu
-	if (keyword_set(standard_maxwellian) OR keyword_set(weighted_maxwellian_XYZ)) $
+	if (keyword_set(standard_maxwellian) or keyword_set(standard_maxwellian_1d) OR keyword_set(weighted_maxwellian_XYZ)) $
 		   	AND ( NOT keyword_set(per_offset) ) then begin
 		nCdf_varPut, nc_id, vx_id, v_x 
 		nCdf_varPut, nc_id, vy_id, v_y 
 		nCdf_varPut, nc_id, vz_id, v_z 
-		nCdf_varPut, nc_id, nThermal_id, nThermal
+		if(keyword_set(weighted_maxwellian_XYZ)) then $
+			nCdf_varPut, nc_id, nThermal_id, nThermal
 		nCdf_varPut, nc_id, vTh_id, vTh
 	endif
 
 nCdf_close, nc_id
 
-stop 
+ 
 end
