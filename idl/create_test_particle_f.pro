@@ -27,7 +27,7 @@ m   = amu * mi
 
 ; create f
 
-nP    = 40000L
+nP    = 1000L
 n_m_3 = 1.1d14
 
 if keyword_set(energy_keV) then E_keV = energy_keV else E_keV = 0.3
@@ -258,9 +258,11 @@ if keyword_set(standard_maxwellian_1d) then begin
 
 	; Create a template Maxwellian for a single spatial point
 	
-	randX	= randomN ( undefined, nP )
-	randY	= randomN ( undefined, nP )
-	randZ	= randomN ( undefined, nP )
+	seed1 = 3.0
+
+	randX	= randomN ( seed1, nP )
+	randY	= randomN ( seed1, nP )
+	randZ	= randomN ( seed1, nP )
 
 	v_x = randX * vTh
 	v_y = randY * 0
@@ -287,8 +289,8 @@ if keyword_set(standard_maxwellian_1d) then begin
 
 	print, 'Density: ', total (weight)
 
-	h = histogram ( v_x/vTh, binSize = 0.05, locations = locations )
-	p = barplot ( locations, h )	
+	;h = histogram ( v_x/vTh, binSize = 0.05, locations = locations )
+	;p = barplot ( locations, h )	
 
 endif ; standard_mawellian
 
