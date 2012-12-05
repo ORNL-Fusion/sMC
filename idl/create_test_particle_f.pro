@@ -27,10 +27,11 @@ m   = amu * mi
 
 ; create f
 
-nP    = 1000L
+nP    = 10000L
 n_m_3 = 1.1d14
+nP_test = nP
 
-if keyword_set(energy_keV) then E_keV = energy_keV else E_keV = 0.3
+if keyword_set(energy_keV) then E_keV = energy_keV else E_keV = 0.5
 
 kT_joule = E_keV * 1d3 * e_
 vTh = sqrt ( 2.0*kT_joule / m )
@@ -92,11 +93,21 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 
 	if nDim eq 1 then begin
 
-		nPts_vx = 500
+		dx = 1
+		dy = 1
+		dz = 1
+
+		dvx = 1
+		dvy = 1
+		dvz = 1
+
+		nPts_vx = 500 
 		vxRange = vTh * nThermal * 2
 		vxMin	= -vxRange / 2d0
 		vxSize = vxRange / nPts_vx
 		vx_grid = dIndGen(nPts_vx)*vxSize+vxMin+vxSize/2d0
+
+		dvx = vx_grid[1]-vx_grid[0]
 
 		vy = 0
 		vz = 0
@@ -109,13 +120,19 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 
 		v = sqrt ( vx_grid_1d^2 + vy_grid_1d^2 + vz_grid_1d^2 )
 		;f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
-		f_m_3_analytic = exp ( -v^2 / vTh^2 )
+		f_m_3_analytic = n_m_3 / (vTh*sqrt(!pi)) * exp ( -v^2 / (vTh^2) )
 
-		dV = n_m_3 / total(f_m_3_analytic)
+		tmp_n_m_3 = 0d0
+		for i=1,nP-1 do begin
+			tmp_n_m_3 = tmp_n_m_3 + dvx * (f_m_3_analytic[i-1]+f_m_3_analytic[i]) / 2
+		endfor
 
-		print, "Density: ", total(f_m_3_analytic)*dV
+		;scalef = n_m_3 / tmp_n_m_3
+		;f_m_3_analytic = f_m_3_analytic * scalef
+		;print, "Density: ", total(f_m_3_analytic)*dvx*dvy*dvz
+		print, "Density [trap]: ", tmp_n_m_3 
 
-		weight = f_m_3_analytic[*]*dV
+		weight = f_m_3_analytic[*];*dvx;
 		v_x = vx_grid_1D[*]
 		v_y = vy_grid_1D[*]
 		v_z = vz_grid_1D[*]
@@ -124,8 +141,33 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 		vPer = v_y*0 
 		vPar = v_y*0
 		vMag = sqrt ( v_x^2 + v_y^2 + v_z^2 )
-		;p=plot(v_x/vTh,weight,xtitle='v/vTh')
+
+		;; Test the weighted f with the un-weighted f.	
+
+		;seed1 = 3.0
+
+		;randX	= randomN ( seed1, nP_test )
+		;randY	= randomN ( seed1, nP_test )
+		;randZ	= randomN ( seed1, nP_test )
+
+		;totalParticleCnt = n_m_3*dx*dy*dz
+		;weight_test = totalParticleCnt / nP_test
+
+		;v_x_test = randX * vTh;/sqrt(2.0)
+
+		;dvx_test = vTh*0.05 
+		;dvy_test = 1
+		;dvz_test = 1
+		;f_test = histogram ( v_x_test/vTh, binSize = dvx_test/vTh, locations = locations )*weight_test/(dvx_test*dvy_test*dvz_test)
+
+		;print, 'Density test: ', total(f_test)*dvx_test*dvy_test*dvz_test
+
+		;p = barplot ( locations+(locations[1]-locations[0])/2.0, f_test,title ='1D f [s/m^2]' )	
+		;!null=plot(v_x/vTh,f_m_3_analytic,xtitle='v/vTh',/over)
+
 		;stop
+
+
 	endif
 	
 endif
@@ -188,6 +230,7 @@ bu_z = b_z / bMag
 	
 if keyword_set(weighted_maxwellian) then begin
 
+		print, 'WEIGHTED_MAXWELLIAN'
 	; Create a grid to sample the pdf
 
 	nThermal = 5 
@@ -259,14 +302,15 @@ if keyword_set(standard_maxwellian_1d) then begin
 	; Create a template Maxwellian for a single spatial point
 	
 	seed1 = 3.0
-
 	randX	= randomN ( seed1, nP )
-	randY	= randomN ( seed1, nP )
-	randZ	= randomN ( seed1, nP )
+	seed2 	= randX[-1]
+	randY	= randomN ( seed2, nP )
+	seed3 	= randY[-1]
+	randZ	= randomN ( seed3, nP )
 
 	v_x = randX * vTh
-	v_y = randY * 0
-	v_z = randZ * 0
+	v_y = randY * vTh 
+	v_z = randZ * vTh
 
 	;	Convert velocity vector to cylindrical
 	;	pg. 39, Cheng.
