@@ -40,12 +40,21 @@ print, 'vTh: ', vTh
 
 fName = 'f_0.5keV_e_weighted_500_kt'
 
+; Sanity checking ...
+
+if(E_keV gt 11) then begin
+		print, 'ERROR: Do you really want E [keV] to be > 10 keV?'
+		stop
+endif
+
+
+
 if keyword_set(weighted_maxwellian_XYZ) then begin
 
 	; Create a grid to sample the pdf
 
 	nDim = 1
-	nThermal = 3 
+	nThermal = 5 
 
 	if nDim eq 3 then begin
 
@@ -164,8 +173,6 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 
 		;p = barplot ( locations+(locations[1]-locations[0])/2.0, f_test,title ='1D f [s/m^2]' )	
 		;!null=plot(v_x/vTh,f_m_3_analytic,xtitle='v/vTh',/over)
-
-		;stop
 
 
 	endif
