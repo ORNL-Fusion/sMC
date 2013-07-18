@@ -10,7 +10,10 @@ pro create_test_particle_f, $
 		eqdskFName = eqdskFName, $
 		plotf = plotf, $
 		rsfwc_1d = rsfwc_1d, $ ; set this to the rsfwc_1d.nc output file
-		energy_keV = energy_keV
+		energy_keV = energy_keV, $
+        density_m3 = density_m3, $
+        n_particles =  n_particles, $
+        OutputFileName = OutputFileName
 
 @constants
 
@@ -27,18 +30,18 @@ m   = amu * mi
 
 ; create f
 
-nP    = 10000L
-n_m_3 = 1.1d14
-nP_test = nP
-
+if keyword_set(n_particles) then nP = n_particles else nP = 500L
+if keyword_set(density_m3) then n_m_3 = density_m3 else n_m_3 = 1.1d14
 if keyword_set(energy_keV) then E_keV = energy_keV else E_keV = 0.5
+
+nP_test = nP
 
 kT_joule = E_keV * 1d3 * e_
 vTh = sqrt ( 2.0*kT_joule / m )
 
 print, 'vTh: ', vTh
 
-fName = 'f_0.5keV_e_weighted_500_kt'
+if keyword_set(OutputFileName) then fName = OutputFilename else fName = 'f.nc'
 
 ; Sanity checking ...
 
@@ -491,7 +494,7 @@ endif
 
 ; Write test netCDF file for reading into AORSA
 
-	nc_id = nCdf_create ( 'data/'+fName+'.nc', /clobber )
+	nc_id = nCdf_create ( fName, /clobber )
 
 	nCdf_control, nc_id, /fill
 	
