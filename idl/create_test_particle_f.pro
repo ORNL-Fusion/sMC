@@ -13,7 +13,8 @@ pro create_test_particle_f, $
 		energy_keV = energy_keV, $
         density_m3 = density_m3, $
         n_particles =  n_particles, $
-        OutputFileName = OutputFileName
+        OutputFileName = OutputFileName, $
+		nVTh = nVTh
 
 @constants
 
@@ -57,7 +58,7 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 	; Create a grid to sample the pdf
 
 	nDim = 1
-	nThermal = 5 
+	if keyword_set(nVTh) then nThermal = nVTh else nThermal = 3 
 
 	if nDim eq 3 then begin
 
