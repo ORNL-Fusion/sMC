@@ -205,6 +205,8 @@ if UniformPoloidal then begin
 	eq_rRange = eq_rMax-eq_rMin	
 	eq_zRange = eq_zMax-eq_zMin	
 
+	myPoly = obj_new('IDLanROI',eqdsk.rbbbs,eqdsk.zbbbs,type=2)
+
 	x_x = fltArr(nP)
 	x_y = fltArr(nP)
 	x_z = fltArr(nP)
@@ -236,7 +238,10 @@ if UniformPoloidal then begin
 		x_r[nP-nParticlesLeftToCreate:-1] = _r
 		psi[nP-nParticlesLeftToCreate:-1] = interpolate ( eq_psi, rI, rJ )
 
-		iiInsideLCFS = where(psi lt 1, iiCnt)
+		;iiInsideLCFS = where(psi lt 1, iiCnt)
+
+		mask = myPoly->ContainsPoints(x_r,x_z)
+		iiInsideLCFS = where(mask eq 1, iiCnt)
 
 		nParticlesLeftToCreate = nP-iiCnt
 
