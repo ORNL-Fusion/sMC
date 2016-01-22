@@ -1,13 +1,13 @@
 pro create_test_particle_f, $
 		single_energy = single_energy, $ ; all particles same energy
-		standard_maxwellian = standard_maxwellian, $ ; more particles near vTh
+		standard_maxwellian_3d = standard_maxwellian_3d, $ ; more particles near vTh
 		standard_maxwellian_1d = standard_maxwellian_1d, $ ; more particles near vTh
-		weighted_maxwellian = weighted_maxwellian, $ ; uniform v particle distrubution, weighting higher near vTh
+		weighted_maxwellian_PerPar = weighted_maxwellian_PerPar, $ ; uniform v particle distrubution, weighting higher near vTh
 		weighted_maxwellian_XYZ = weighted_maxwellian_XYZ, $ ; for kineticj
 		cql3d = cql3d, $
 		per_offset = per_offset, $ ; % c
 		par_offset = par_offset, $ ; % c
-		eqdskFName = eqdskFName, $
+		eqdskFName = _eqdskFName, $
 		plotf = plotf, $
 		rsfwc_1d = rsfwc_1d, $ ; set this to the rsfwc_1d.nc output file
 		energy_keV = energy_keV, $
@@ -18,22 +18,23 @@ pro create_test_particle_f, $
 
 @constants
 
+if keyword_set(n_particles) then nP = n_particles else nP = 500L
+if keyword_set(density_m3) then n_m_3 = density_m3 else n_m_3 = 1.1d14
+if keyword_set(energy_keV) then E_keV = energy_keV else E_keV = 0.5
+if keyword_set(_eqdskFName) then eqdskFName = _eqdskFName else eqdskFName = 'eqdsk'
+
+eqdsk   = readGEQDSK ( eqdskFName, /noTor )
+
 e_ = e
 
 ; species
 
-amu	= _me_mi 
-Z   = -1.0
-;amu = 1 
-;Z = 1.0
+amu = 2 
+Z = 1.0
 q   = Z * e_
 m   = amu * mi
 
 ; create f
-
-if keyword_set(n_particles) then nP = n_particles else nP = 500L
-if keyword_set(density_m3) then n_m_3 = density_m3 else n_m_3 = 1.1d14
-if keyword_set(energy_keV) then E_keV = energy_keV else E_keV = 0.5
 
 nP_test = nP
 
@@ -46,12 +47,10 @@ if keyword_set(OutputFileName) then fName = OutputFilename else fName = 'f.nc'
 
 ; Sanity checking ...
 
-if(E_keV gt 11) then begin
+if(E_keV gt 10) then begin
 		print, 'ERROR: Do you really want E [keV] to be > 10 keV?'
 		stop
 endif
-
-
 
 if keyword_set(weighted_maxwellian_XYZ) then begin
 
@@ -86,7 +85,6 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 		nP = nPts_vx * nPts_vy * nPts_vz
 
 		v = sqrt ( vx_grid_3D^2 + vy_grid_3D^2 + vz_grid_3D^2 )
-		;f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
 		f_m_3_analytic = exp ( -v^2 / vTh^2 )
 
 		; Check the density at this point
@@ -132,7 +130,6 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 		vz_grid_1D = fltArr(nP) + vz
 
 		v = sqrt ( vx_grid_1d^2 + vy_grid_1d^2 + vz_grid_1d^2 )
-		;f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
 		f_m_3_analytic = n_m_3 / (vTh*sqrt(!pi)) * exp ( -v^2 / (vTh^2) )
 
 		tmp_n_m_3 = 0d0
@@ -140,9 +137,6 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 			tmp_n_m_3 = tmp_n_m_3 + dvx * (f_m_3_analytic[i-1]+f_m_3_analytic[i]) / 2
 		endfor
 
-		;scalef = n_m_3 / tmp_n_m_3
-		;f_m_3_analytic = f_m_3_analytic * scalef
-		;print, "Density: ", total(f_m_3_analytic)*dvx*dvy*dvz
 		print, "Density [trap]: ", tmp_n_m_3 
 
 		weight = f_m_3_analytic[*];*dvx;
@@ -155,39 +149,120 @@ if keyword_set(weighted_maxwellian_XYZ) then begin
 		vPar = v_y*0
 		vMag = sqrt ( v_x^2 + v_y^2 + v_z^2 )
 
-		;; Test the weighted f with the un-weighted f.	
-
-		;seed1 = 3.0
-
-		;randX	= randomN ( seed1, nP_test )
-		;randY	= randomN ( seed1, nP_test )
-		;randZ	= randomN ( seed1, nP_test )
-
-		;totalParticleCnt = n_m_3*dx*dy*dz
-		;weight_test = totalParticleCnt / nP_test
-
-		;v_x_test = randX * vTh;/sqrt(2.0)
-
-		;dvx_test = vTh*0.05 
-		;dvy_test = 1
-		;dvz_test = 1
-		;f_test = histogram ( v_x_test/vTh, binSize = dvx_test/vTh, locations = locations )*weight_test/(dvx_test*dvy_test*dvz_test)
-
-		;print, 'Density test: ', total(f_test)*dvx_test*dvy_test*dvz_test
-
-		;p = barplot ( locations+(locations[1]-locations[0])/2.0, f_test,title ='1D f [s/m^2]' )	
-		;!null=plot(v_x/vTh,f_m_3_analytic,xtitle='v/vTh',/over)
-
-
 	endif
 	
 endif
 
-; Spatial point
+if keyword_set(weighted_maxwellian_PerPar) then begin
 
-x_r = fltArr(nP) + 10.0;(max(eqdsk.rbbbs)-eqdsk.rmaxis)/2 + eqdsk.rmaxis
-x_z = fltArr(nP)*0.0
-x_p = fltArr(nP)*0.0
+	print, 'WEIGHTED_MAXWELLIAN_PER_PAR'
+
+	nThermal = 5 
+	
+	nPtsPar = 20
+	parRange = vTh * nThermal * 2
+	parMin	= -parRange / 2d0
+	parSize = parRange / nPtsPar 
+	vPar_grid = dIndGen(nPtsPar)*parSize+parMin+parSize/2d0
+
+	nPtsPer = 10 
+	perRange = vTh * nThermal 
+	perMin	= 0d0
+	perSize = perRange / nPtsPer 
+	vPer_grid = dIndGen(nPtsPer)*perSize+perMin+perSize/2d0
+	
+	vPer_grid_2D = transpose(rebin ( vPer_grid, nPtsPer, nPtsPar ))
+	vPar_grid_2D = rebin ( vPar_grid, nPtsPar, nPtsPer )
+
+	v = sqrt ( vPer_grid_2D^2 + vPar_grid_2D^2 )
+	f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
+
+	dV = 2 * !pi * vPer_grid_2D * perSize * parSize
+
+	weight = f_m_3_analytic[*] * dV[*]
+	vPar = vPar_grid_2D[*]
+	vPer = vPer_grid_2D[*]
+	vMag = sqrt ( vPer^2 + vPar^2 )
+
+endif
+
+
+; Spatial point(s)
+
+UniformPoloidal = 1
+
+if UniformPoloidal then begin
+
+	eq_psi = eqdsk.psizr/eqdsk.sibry
+	eq_r = eqdsk.r
+	eq_z = eqdsk.z
+	eq_nR = n_elements(eq_r)
+	eq_nZ = n_elements(eq_z)
+	eq_rMin = eq_r[0]
+	eq_rMax = eq_r[-1]
+	eq_zMin = eq_z[0]
+	eq_zMax = eq_z[-1]
+	eq_rRange = eq_rMax-eq_rMin	
+	eq_zRange = eq_zMax-eq_zMin	
+
+	x_x = fltArr(nP)
+	x_y = fltArr(nP)
+	x_z = fltArr(nP)
+	x_r = fltArr(nP)
+	psi = fltArr(nP)
+	x_weight = fltArr(nP)
+	x_vPer = fltArr(nP)
+	x_vPar = fltArr(nP)
+
+	; Iterate until all particles are within the LCFS
+
+	nParticlesLeftToCreate = nP
+	while nParticlesLeftToCreate gt 0 do begin
+
+		; Uniformly fill a cube in XYZ and select out those within the torus
+
+		_x = randomU ( undefined, nParticlesLeftToCreate ) * 2*eq_rMax - eq_rMax
+		_y = randomU ( undefined, nParticlesLeftToCreate ) * 2*eq_rMax - eq_rMax
+		_z = randomU ( undefined, nParticlesLeftToCreate ) * eq_zRange + eq_zMin
+
+		_r = sqrt(_x^2+_y^2)
+
+		rI = (_r-eq_rMin)/eq_rRange * (eq_nR-1)
+		rJ = (_z-eq_zMin)/eq_zRange * (eq_nZ-1)
+
+		x_x[nP-nParticlesLeftToCreate:-1] = _x
+		x_y[nP-nParticlesLeftToCreate:-1] = _y
+		x_z[nP-nParticlesLeftToCreate:-1] = _z
+		x_r[nP-nParticlesLeftToCreate:-1] = _r
+		psi[nP-nParticlesLeftToCreate:-1] = interpolate ( eq_psi, rI, rJ )
+
+		iiInsideLCFS = where(psi lt 1, iiCnt)
+
+		nParticlesLeftToCreate = nP-iiCnt
+
+		print, nParticlesLeftToCreate
+
+		psi[0:iiCnt-1] = psi[iiInsideLCFS] 
+		x_x[0:iiCnt-1] = x_x[iiInsideLCFS]
+		x_y[0:iiCnt-1] = x_y[iiInsideLCFS]
+		x_z[0:iiCnt-1] = x_z[iiInsideLCFS]
+		x_r[0:iiCnt-1] = x_r[iiInsideLCFS]
+	endwhile
+
+	if keyword_set(weighted_maxwellian_perpar)then begin
+		x_vPer = vPer[IndGen(nP) mod (nPtsPer*nPtsPar)]
+		x_vPar = vPar[IndGen(nP) mod (nPtsPer*nPtsPar)]
+		x_weight = weight[IndGen(nP) mod (nPtsPer*nPtsPar)]
+	endif
+
+endif else begin
+
+	x_r = fltArr( nP ) + 1.0
+	x_z = fltArr( nP )
+
+endelse
+
+x_p = fltArr(nP)
 
 x_x = x_r * cos ( x_p )
 x_y = x_r * sin ( x_p )
@@ -197,9 +272,6 @@ print, 'R: ', x_r[0]
 ;   Interpolate B to particle locations
 
 if ( NOT keyword_set ( rsfwc_1d ) ) then begin
-
-	if not keyword_set(eqdskFName) then eqdskFName	= 'data/g129x129_1051206002.01120.cmod'
-	eqdsk   = readGEQDSK ( eqdskFName )
 
 	r_b0 = eqdsk.r
 	z_b0 = eqdsk.z
@@ -234,46 +306,11 @@ endif else begin
 endelse
 
 bMag    = sqrt ( b_r^2 + b_p^2 + b_z^2 )
-
 bu_r = b_r / bMag
 bu_p = b_p / bMag
 bu_z = b_z / bMag
 	
-if keyword_set(weighted_maxwellian) then begin
-
-		print, 'WEIGHTED_MAXWELLIAN'
-	; Create a grid to sample the pdf
-
-	nThermal = 5 
-	
-	nPtsPar = round((-1+sqrt(1+8*nP))/2)
-	parRange = vTh * nThermal * 2
-	parMin	= -parRange / 2d0
-	parSize = parRange / nPtsPar 
-	vPar_grid = dIndGen(nPtsPar)*parSize+parMin+parSize/2d0
-
-	nPtsPer = nPtsPar / 2
-	perRange = vTh * nThermal 
-	perMin	= 0d0
-	perSize = perRange / nPtsPer 
-	vPer_grid = dIndGen(nPtsPer)*perSize+perMin+perSize/2d0
-	
-	vPer_grid_2D = transpose(rebin ( vPer_grid, nPtsPer, nPtsPar ))
-	vPar_grid_2D = rebin ( vPar_grid, nPtsPar, nPtsPer )
-
-	v = sqrt ( vPer_grid_2D^2 + vPar_grid_2D^2 )
-	f_m_3_analytic = n_m_3 / (sqrt(2*!pi)*vTh)^3 * exp ( -v^2 / (2*vTh^2) )
-
-	dV = 2 * !pi * vPer_grid_2D * perSize * parSize
-
-	weight = f_m_3_analytic[*] * dV[*]
-	vPar = vPar_grid_2D[*]
-	vPer = vPer_grid_2D[*]
-	vMag = sqrt ( vPer^2 + vPar^2 )
-
-endif
-
-if keyword_set(standard_maxwellian) then begin
+if keyword_set(standard_maxwellian_3d) then begin
 
 	; Create a template Maxwellian for a single spatial point
 	
@@ -295,7 +332,13 @@ if keyword_set(standard_maxwellian) then begin
 	vPar = v_r * bu_r + v_z * bu_z + v_p * bu_p
 	vPer = sqrt ( vMag^2 - vPar^2 )
 
-	weight = fltArr(nP) + n_m_3 / nP
+	; Need device volume to normalize the weight to the correct density
+	
+	eq_dr = eqdsk.r[1]-eqdsk.r[0]			
+	eq_dz = eqdsk.z[1]-eqdsk.z[0]			
+	DeviceVolumeWithinLCFS = total(eqdsk.mask*eq_dr*eq_dz*2*!pi*eqdsk.r2d)
+	TotalNumberOfParticles = DeviceVolumeWithinLCFS*n_m_3
+	weight = fltArr(nP) + TotalNumberOfParticles / nP; * x_r
 
 	if keyword_set(per_offset) then $
 			vPer = vPer + per_offset * c
@@ -305,8 +348,13 @@ if keyword_set(standard_maxwellian) then begin
 			vMag = sqrt ( vPer^2 + vPar^2 )
 
 	print, 'Density: ', total (weight)
-
+stop
+	x_vPer = vPer
+	x_vPar = vPar
+	x_weight = weight
+	
 endif ; standard_mawellian
+
 
 if keyword_set(standard_maxwellian_1d) then begin
 
@@ -344,11 +392,7 @@ if keyword_set(standard_maxwellian_1d) then begin
 
 	print, 'Density: ', total (weight)
 
-	;h = histogram ( v_x/vTh, binSize = 0.05, locations = locations )
-	;p = barplot ( locations, h )	
-
 endif ; standard_mawellian
-
 
 
 if keyword_set(single_energy) then begin
@@ -504,16 +548,13 @@ endif
 
 	vPer_id = nCdf_varDef ( nc_id, 'vPer', np_id, /float )
 	vPar_id = nCdf_varDef ( nc_id, 'vPar', np_id, /float )
-	if (keyword_set(standard_maxwellian) OR keyword_set(standard_maxwellian_1d) OR keyword_set(weighted_maxwellian_XYZ)) $
-		AND ( NOT keyword_set(per_offset) ) then begin
-		vx_id = nCdf_varDef ( nc_id, 'vx', np_id, /float )
-		vy_id = nCdf_varDef ( nc_id, 'vy', np_id, /float )
-		vz_id = nCdf_varDef ( nc_id, 'vz', np_id, /float )
-		nThermal_id = nCdf_varDef ( nc_id, 'nThermal', scalar_id, /short )
-		vTh_id = nCdf_varDef ( nc_id, 'vTh', scalar_id, /float )
-	endif
+	vx_id = nCdf_varDef ( nc_id, 'vx', np_id, /float )
+	vy_id = nCdf_varDef ( nc_id, 'vy', np_id, /float )
+	vz_id = nCdf_varDef ( nc_id, 'vz', np_id, /float )
+	nThermal_id = nCdf_varDef ( nc_id, 'nThermal', scalar_id, /short )
+	vTh_id = nCdf_varDef ( nc_id, 'vTh', scalar_id, /float )
 	E_eV_id = nCdf_varDef ( nc_id, 'E_eV', np_id, /float )
-	r_id = nCdf_varDef ( nc_id, 'r', np_id, /float )
+	r_id = nCdf_varDef ( nc_id, 'R', np_id, /float )
 	p_id = nCdf_varDef ( nc_id, 'p', np_id, /float )
 	z_id = nCdf_varDef ( nc_id, 'z', np_id, /float )
 	x_id = nCdf_varDef ( nc_id, 'x', np_id, /float )
@@ -531,25 +572,20 @@ endif
 	nCdf_varPut, nc_id, z_id, x_z 
 	nCdf_varPut, nc_id, x_id, x_x 
 	nCdf_varPut, nc_id, y_id, x_y 
-	nCdf_varPut, nc_id, vPer_id, vPer 
-	nCdf_varPut, nc_id, vPar_id, vPar 
-	nCdf_varPut, nc_id, weight_id, weight
+	nCdf_varPut, nc_id, vPer_id, x_vPer 
+	nCdf_varPut, nc_id, vPar_id, x_vPar 
+	nCdf_varPut, nc_id, weight_id, x_weight
 	nCdf_varPut, nc_id, status_id, status
 	nCdf_varPut, nc_id, E_eV_id, E_eV
 	nCdf_varPut, nc_id, amu_id, amu + intArr(nP)
 	nCdf_varPut, nc_id, _Z_id, Z + intArr(nP)
 	nCdf_varPut, nc_id, mu_id, mu
-	if (keyword_set(standard_maxwellian) or keyword_set(standard_maxwellian_1d) OR keyword_set(weighted_maxwellian_XYZ)) $
-		   	AND ( NOT keyword_set(per_offset) ) then begin
-		nCdf_varPut, nc_id, vx_id, v_x 
-		nCdf_varPut, nc_id, vy_id, v_y 
-		nCdf_varPut, nc_id, vz_id, v_z 
-		if(keyword_set(weighted_maxwellian_XYZ)) then $
-			nCdf_varPut, nc_id, nThermal_id, nThermal
-		nCdf_varPut, nc_id, vTh_id, vTh
-	endif
+	nCdf_varPut, nc_id, vx_id, v_x 
+	nCdf_varPut, nc_id, vy_id, v_y 
+	nCdf_varPut, nc_id, vz_id, v_z 
+	nCdf_varPut, nc_id, vTh_id, vTh
 
-nCdf_close, nc_id
+	nCdf_close, nc_id
 
- 
+stop 
 end
