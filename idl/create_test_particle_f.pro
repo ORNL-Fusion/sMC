@@ -14,7 +14,9 @@ pro create_test_particle_f, $
         density_m3 = density_m3, $
         n_particles =  n_particles, $
         OutputFileName = OutputFileName, $
-		nVTh = nVTh
+		nVTh = nVTh, $
+		amu = _amu, $
+		Z = _Z
 
 @constants
 
@@ -22,6 +24,8 @@ if keyword_set(n_particles) then nP = n_particles else nP = 500L
 if keyword_set(density_m3) then n_m_3 = density_m3 else n_m_3 = 1.1d14
 if keyword_set(energy_keV) then E_keV = energy_keV else E_keV = 0.5
 if keyword_set(_eqdskFName) then eqdskFName = _eqdskFName else eqdskFName = 'eqdsk'
+if keyword_set(_amu) then amu = _amu else amu = 1.0
+if keyword_set(_Z) then Z = _Z else Z = 1.0
 
 eqdsk   = readGEQDSK ( eqdskFName, /noTor )
 
@@ -29,8 +33,6 @@ e_ = e
 
 ; species
 
-amu = 2 
-Z = 1.0
 q   = Z * e_
 m   = amu * mi
 
@@ -39,11 +41,12 @@ m   = amu * mi
 nP_test = nP
 
 kT_joule = E_keV * 1d3 * e_
-vTh = sqrt ( 2.0*kT_joule / m )
+vTh = sqrt ( 3.0*kT_joule / m )
+vTh_1d = sqrt ( kT_joule / m )
 
 print, 'vTh: ', vTh
 
-if keyword_set(OutputFileName) then fName = OutputFilename else fName = 'f.nc'
+if keyword_set(OutputFileName) then fName = OutputFilename else fName = 'pl.nc'
 
 ; Sanity checking ...
 
@@ -323,9 +326,12 @@ if keyword_set(standard_maxwellian_3d) then begin
 	randY	= randomN ( undefined, nP )
 	randZ	= randomN ( undefined, nP )
 
-	v_x = randX * vTh
-	v_y = randY * vTh
-	v_z = randZ * vTh
+	; See https://en.wikipedia.org/wiki/Maxwell%E2%80%93Boltzmann_distribution
+	; Section : Distribution of the velocity vector
+
+	v_x = randX * vTh_1d
+	v_y = randY * vTh_1d
+	v_z = randZ * vTh_1d
 	
 	;	Convert velocity vector to cylindrical
 	;	pg. 39, Cheng.
@@ -343,7 +349,7 @@ if keyword_set(standard_maxwellian_3d) then begin
 	eq_dz = eqdsk.z[1]-eqdsk.z[0]			
 	DeviceVolumeWithinLCFS = total(eqdsk.mask*eq_dr*eq_dz*2*!pi*eqdsk.r2d)
 	TotalNumberOfParticles = DeviceVolumeWithinLCFS*n_m_3
-	weight = fltArr(nP) + TotalNumberOfParticles / nP; * x_r
+	weight = fltArr(nP) + TotalNumberOfParticles / nP
 
 	if keyword_set(per_offset) then $
 			vPer = vPer + per_offset * c
@@ -352,11 +358,18 @@ if keyword_set(standard_maxwellian_3d) then begin
 	if keyword_set(par_offset) OR keyword_set(per_offset) then $
 			vMag = sqrt ( vPer^2 + vPar^2 )
 
-	print, 'Density: ', total (weight)
-stop
+	print, 'Total number of particles: ', total (weight)
+
 	x_vPer = vPer
 	x_vPar = vPar
 	x_weight = weight
+
+	; Plot up the f(v) histogram and compare with analytic shape for sanity check
+	;VelocityHistogram = histogram(sqrt(vPer^2+vPar^2),min=0.0, max=vTh_1d*5, nBins=50, locations=hv)
+	;p=plot(hv,VelocityHistogram)
+	;f_v = hv^2*exp(-hv^2/(2*vTh_1d^2)) 
+	;p=plot(hv,f_v)
+	;stop
 	
 endif ; standard_mawellian
 
